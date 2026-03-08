@@ -20,6 +20,21 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const { data, error } = await supabase.auth.signUp({
+  email,
+  password,
+  options: {
+    emailRedirectTo: `${window.location.origin}/login`,
+    data: {
+      full_name: name,
+      phone: phone || null,
+    },
+  },
+});
+
+console.log("signup data:", data);
+console.log("signup error:", error);
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
