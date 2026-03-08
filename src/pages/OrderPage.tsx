@@ -19,8 +19,6 @@ import { getIller, getIlceler } from "@/lib/turkey-data";
 import { getMahalleler } from "@/lib/mahalle-data";
 import { supabase } from "@/lib/supabaseClient";
 
-const [submitting, setSubmitting] = useState(false);
-
 const timeSlots = [
   "08:00 - 10:00",
   "10:00 - 12:00",
@@ -46,6 +44,7 @@ const OrderPage = () => {
   const [addressWarning, setAddressWarning] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -150,11 +149,10 @@ const OrderPage = () => {
 
   const selectedProduct = products.find((p) => String(p.id) === String(form.product));
 
-  if (submitting) return;
-setSubmitting(true);
-  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (submitting) return;
 
     if (
       !form.name ||
@@ -182,8 +180,12 @@ setSubmitting(true);
       return;
     }
 
+    setSubmitting(true);
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       const quantityNumber = Number(form.quantity || 1);
       const unitPrice = Number(selectedProduct.price || 0);
@@ -214,26 +216,28 @@ setSubmitting(true);
       }
 
       const { error: itemError } = await supabase.from("order_items").insert({
-  order_id: orderData.id,
-  product_id: selectedProduct.id,
-  product_name_snapshot: selectedProduct.name,
-  volume_snapshot: selectedProduct.Volume,
-  unit_snapshot: selectedProduct.unit,
-  unit_price: unitPrice,
-  quantity: quantityNumber,
-  line_total: totalAmount,
-});
+        order_id: orderData.id,
+        product_id: selectedProduct.id,
+        product_name_snapshot: selectedProduct.name,
+        volume_snapshot: selectedProduct.Volume,
+        unit_snapshot: selectedProduct.unit,
+        unit_price: unitPrice,
+        quantity: quantityNumber,
+        line_total: totalAmount,
+      });
 
-if (itemError) {
-  await supabase.from("orders").delete().eq("id", orderData.id);
-  throw itemError;
-}
+      if (itemError) {
+        await supabase.from("orders").delete().eq("id", orderData.id);
+        throw itemError;
+      }
 
       setSubmitted(true);
       toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
     } catch (err: any) {
       console.error("Sipariş oluşturma hatası:", err);
       toast.error(err.message || "Sipariş oluşturulamadı");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -244,7 +248,10 @@ if (itemError) {
         <div className="pt-24 pb-20 container mx-auto px-4 flex items-center justify-center min-h-[80vh]">
           <div className="text-center max-w-md">
             <CheckCircle className="h-16 w-16 text-primary mx-auto mb-6" />
-            <h2 className="text-3xl font-bold text-foreground mb-4" style={{ fontFamily: "var(--font-heading)" }}>
+            <h2
+              className="text-3xl font-bold text-foreground mb-4"
+              style={{ fontFamily: "var(--font-heading)" }}
+            >
               Rezervasyon Onaylandı!
             </h2>
             <p className="text-muted-foreground mb-8">
@@ -286,44 +293,82 @@ if (itemError) {
       <div className="pt-24 pb-20">
         <div className="container mx-auto px-4 max-w-5xl">
           <div className="text-center mb-10">
-            <p className="text-sm uppercase tracking-widest text-accent font-semibold mb-3">Rezervasyon</p>
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
+            <p className="text-sm uppercase tracking-widest text-accent font-semibold mb-3">
+              Rezervasyon
+            </p>
+            <h1
+              className="text-3xl md:text-4xl font-bold text-foreground"
+              style={{ fontFamily: "var(--font-heading)" }}
+            >
               Taze Sütünüzü Rezerve Edin
             </h1>
-            <p className="text-muted-foreground mt-3">Bilgilerinizi doldurun, biz kapınıza kadar getirelim.</p>
+            <p className="text-muted-foreground mt-3">
+              Bilgilerinizi doldurun, biz kapınıza kadar getirelim.
+            </p>
           </div>
 
           <div className="grid lg:grid-cols-3 gap-8">
-            <form onSubmit={handleSubmit} className="lg:col-span-2 space-y-6 bg-card rounded-2xl p-6 md:p-10" style={{ boxShadow: "var(--shadow-elevated)" }}>
+            <form
+              onSubmit={handleSubmit}
+              className="lg:col-span-2 space-y-6 bg-card rounded-2xl p-6 md:p-10"
+              style={{ boxShadow: "var(--shadow-elevated)" }}
+            >
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
+                <h3
+                  className="text-lg font-semibold text-foreground"
+                  style={{ fontFamily: "var(--font-heading)" }}
+                >
                   Kişisel Bilgileriniz
                 </h3>
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Ad Soyad *</Label>
-                    <Input id="name" placeholder="Ahmet Yılmaz" value={form.name} onChange={(e) => updateField("name", e.target.value)} required />
+                    <Input
+                      id="name"
+                      placeholder="Ahmet Yılmaz"
+                      value={form.name}
+                      onChange={(e) => updateField("name", e.target.value)}
+                      required
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">E-posta Adresi *</Label>
-                    <Input id="email" type="email" placeholder="ahmet@ornek.com" value={form.email} onChange={(e) => updateField("email", e.target.value)} required />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="ahmet@ornek.com"
+                      value={form.email}
+                      onChange={(e) => updateField("email", e.target.value)}
+                      required
+                    />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="phone">Telefon Numarası *</Label>
-                  <Input id="phone" type="tel" placeholder="+90 555 123 4567" value={form.phone} onChange={(e) => updateField("phone", e.target.value)} required />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="+90 555 123 4567"
+                    value={form.phone}
+                    onChange={(e) => updateField("phone", e.target.value)}
+                    required
+                  />
                 </div>
 
                 <div className="grid sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>İl *</Label>
                     <Select value={form.il} onValueChange={(v) => updateField("il", v)}>
-                      <SelectTrigger><SelectValue placeholder="İl seçin" /></SelectTrigger>
+                      <SelectTrigger>
+                        <SelectValue placeholder="İl seçin" />
+                      </SelectTrigger>
                       <SelectContent>
                         {availableIller.map((il) => (
-                          <SelectItem key={il} value={il}>{il}</SelectItem>
+                          <SelectItem key={il} value={il}>
+                            {il}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -331,11 +376,19 @@ if (itemError) {
 
                   <div className="space-y-2">
                     <Label>İlçe *</Label>
-                    <Select value={form.ilce} onValueChange={(v) => updateField("ilce", v)} disabled={!form.il}>
-                      <SelectTrigger><SelectValue placeholder="İlçe seçin" /></SelectTrigger>
+                    <Select
+                      value={form.ilce}
+                      onValueChange={(v) => updateField("ilce", v)}
+                      disabled={!form.il}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="İlçe seçin" />
+                      </SelectTrigger>
                       <SelectContent>
                         {availableIlceler.map((ilce) => (
-                          <SelectItem key={ilce} value={ilce}>{ilce}</SelectItem>
+                          <SelectItem key={ilce} value={ilce}>
+                            {ilce}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -361,7 +414,9 @@ if (itemError) {
                       </SelectTrigger>
                       <SelectContent>
                         {availableMahalleler.map((m) => (
-                          <SelectItem key={m} value={m}>{m}</SelectItem>
+                          <SelectItem key={m} value={m}>
+                            {m}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -389,7 +444,10 @@ if (itemError) {
               </div>
 
               <div className="space-y-4 pt-4 border-t border-border">
-                <h3 className="text-lg font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
+                <h3
+                  className="text-lg font-semibold text-foreground"
+                  style={{ fontFamily: "var(--font-heading)" }}
+                >
                   Ürün & Teslimat
                 </h3>
 
@@ -397,7 +455,9 @@ if (itemError) {
                   <div className="space-y-2">
                     <Label>Ürün *</Label>
                     <Select value={form.product} onValueChange={(v) => updateField("product", v)}>
-                      <SelectTrigger><SelectValue placeholder="Ürün seçin" /></SelectTrigger>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Ürün seçin" />
+                      </SelectTrigger>
                       <SelectContent>
                         {loadingProducts ? (
                           <SelectItem value="loading" disabled>
@@ -421,7 +481,9 @@ if (itemError) {
                   <div className="space-y-2">
                     <Label>Adet</Label>
                     <Select value={form.quantity} onValueChange={(v) => updateField("quantity", v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                           <SelectItem key={n} value={String(n)}>
@@ -438,7 +500,13 @@ if (itemError) {
                     <Label>Teslimat Tarihi *</Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !date && "text-muted-foreground"
+                          )}
+                        >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {date ? format(date, "d MMMM yyyy", { locale: tr }) : "Tarih seçin"}
                         </Button>
@@ -459,10 +527,14 @@ if (itemError) {
                   <div className="space-y-2">
                     <Label>Teslimat Saati *</Label>
                     <Select value={form.timeSlot} onValueChange={(v) => updateField("timeSlot", v)}>
-                      <SelectTrigger><SelectValue placeholder="Saat seçin" /></SelectTrigger>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Saat seçin" />
+                      </SelectTrigger>
                       <SelectContent>
                         {timeSlots.map((t) => (
-                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                          <SelectItem key={t} value={t}>
+                            {t}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -481,10 +553,17 @@ if (itemError) {
                 </div>
               </div>
 
-             <Button type="submit" size="lg" className="w-full py-6 text-base font-semibold" disabled={submitting}>
-  {submitting ? "Gönderiliyor..." : "Rezervasyonu Tamamla"}
-</Button>
-              <p className="text-xs text-muted-foreground text-center">Ödeme gerekli değildir. Kapıda ödeme yapılır.</p>
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full py-6 text-base font-semibold"
+                disabled={submitting}
+              >
+                {submitting ? "Gönderiliyor..." : "Rezervasyonu Tamamla"}
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                Ödeme gerekli değildir. Kapıda ödeme yapılır.
+              </p>
             </form>
 
             <div className="lg:col-span-1">
