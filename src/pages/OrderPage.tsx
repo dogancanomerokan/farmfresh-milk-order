@@ -217,7 +217,7 @@ if (orderError) {
 }
 
       const { error: itemError } = await supabase.from("order_items").insert({
-        order_id: orderData.id,
+        order_id: orderId,
         product_id: selectedProduct.id,
         product_name_snapshot: selectedProduct.name,
         volume_snapshot: selectedProduct.Volume,
