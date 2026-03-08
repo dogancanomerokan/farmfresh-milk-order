@@ -19,6 +19,8 @@ import { getIller, getIlceler } from "@/lib/turkey-data";
 import { getMahalleler } from "@/lib/mahalle-data";
 import { supabase } from "@/lib/supabaseClient";
 
+const [submitting, setSubmitting] = useState(false);
+
 const timeSlots = [
   "08:00 - 10:00",
   "10:00 - 12:00",
@@ -148,6 +150,9 @@ const OrderPage = () => {
 
   const selectedProduct = products.find((p) => String(p.id) === String(form.product));
 
+  if (submitting) return;
+setSubmitting(true);
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
