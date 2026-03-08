@@ -64,30 +64,30 @@ const OrderPage = () => {
   }, []);
 
   useEffect(() => {
-  const loadProducts = async () => {
-    setLoadingProducts(true);
+    const loadProducts = async () => {
+      setLoadingProducts(true);
 
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .eq("active", true);
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("active", true);
 
-    if (error) {
-      console.error("Ürünler alınamadı:", error.message);
-      toast.error("Ürünler yüklenemedi");
-      setProducts([]);
-    } else {
-      const sortedProducts = (data || []).sort(
-        (a, b) => Number(b.Volume) - Number(a.Volume)
-      );
-      setProducts(sortedProducts);
-    }
+      if (error) {
+        console.error("Ürünler alınamadı:", error.message);
+        toast.error("Ürünler yüklenemedi");
+        setProducts([]);
+      } else {
+        const sortedProducts = (data || []).sort(
+          (a, b) => Number(b.Volume) - Number(a.Volume)
+        );
+        setProducts(sortedProducts);
+      }
 
-    setLoadingProducts(false);
-  };
+      setLoadingProducts(false);
+    };
 
-  loadProducts();
-}, []);
+    loadProducts();
+  }, []);
 
   const hasZones = zones.length > 0;
 
@@ -146,7 +146,9 @@ const OrderPage = () => {
     setAddressWarning("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const selectedProduct = products.find((p) => String(p.id) === String(form.product));
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (
@@ -170,21 +172,66 @@ const OrderPage = () => {
       return;
     }
 
-    const orders = JSON.parse(localStorage.getItem("milk-orders") || "[]");
+    if (!selectedProduct) {
+      toast.error("Lütfen bir ürün seçin");
+      return;
+    }
 
-    orders.push({
-      ...form,
-      date: date.toISOString(),
-      createdAt: new Date().toISOString(),
-      id: crypto.randomUUID(),
-    });
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    localStorage.setItem("milk-orders", JSON.stringify(orders));
-    setSubmitted(true);
-    toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
+      const quantityNumber = Number(form.quantity || 1);
+      const unitPrice = Number(selectedProduct.price || 0);
+      const totalAmount = unitPrice * quantityNumber;
+
+      const { data: orderData, error: orderError } = await supabase
+        .from("orders")
+        .insert({
+          user_id: user?.id || null,
+          guest_name: form.name,
+          guest_email: form.email,
+          guest_phone: form.phone,
+          il: form.il,
+          ilce: form.ilce,
+          mahalle: form.mahalle || null,
+          address: form.address,
+          delivery_date: date.toISOString().split("T")[0],
+          time_slot: form.timeSlot,
+          notes: form.notes || null,
+          status: "pending",
+          total_amount: totalAmount,
+        })
+        .select()
+        .single();
+
+      if (orderError) {
+        throw orderError;
+      }
+
+      const { error: itemError } = await supabase.from("order_items").insert({
+        order_id: orderData.id,
+        product_id: selectedProduct.id,
+        product_name_snapshot: selectedProduct.name,
+        volume_snapshot: selectedProduct.Volume,
+        unit_snapshot: selectedProduct.unit,
+        unit_price: unitPrice,
+        quantity: quantityNumber,
+        line_total: totalAmount,
+      });
+
+      if (itemError) {
+        throw itemError;
+      }
+
+      setSubmitted(true);
+      toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
+    } catch (err: any) {
+      console.error("Sipariş oluşturma hatası:", err);
+      toast.error(err.message || "Sipariş oluşturulamadı");
+    }
   };
-
-  const selectedProduct = products.find((p) => String(p.id) === String(form.product));
 
   if (submitted) {
     return (
@@ -358,10 +405,10 @@ const OrderPage = () => {
                           </SelectItem>
                         ) : (
                           products.map((p) => (
-  <SelectItem key={p.id} value={String(p.id)}>
-    {p.name} - {p.Volume} {p.unit} / {p.price} TL
-  </SelectItem>
-))
+                            <SelectItem key={p.id} value={String(p.id)}>
+                              {p.name} - {p.Volume} {p.unit} / {p.price} TL
+                            </SelectItem>
+                          ))
                         )}
                       </SelectContent>
                     </Select>
