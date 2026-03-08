@@ -15,6 +15,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import OrderSummary from "@/components/OrderSummary";
 import { getDeliveryZones, isAddressAllowed, DeliveryZone } from "@/lib/delivery-zones";
+import { getIller, getIlceler } from "@/lib/turkey-data";
 
 const timeSlots = [
   "08:00 - 10:00",
@@ -56,11 +57,17 @@ const OrderPage = () => {
 
   const hasZones = zones.length > 0;
 
-  // Benzersiz il listesi
-  const uniqueIller = hasZones ? [...new Set(zones.map((z) => z.il))] : [];
-  // Seçilen il'e göre ilçeler
-  const filteredIlceler = hasZones ? [...new Set(zones.filter((z) => z.il === form.il).map((z) => z.ilce))] : [];
-  // Seçilen ilçeye göre mahalleler
+  // İl listesi: bölge tanımlıysa sadece izin verilenler, yoksa tüm Türkiye
+  const availableIller = hasZones
+    ? [...new Set(zones.map((z) => z.il))].sort((a, b) => a.localeCompare(b, "tr"))
+    : getIller();
+
+  // İlçe listesi: bölge tanımlıysa sadece izin verilenler, yoksa seçilen ilin tüm ilçeleri
+  const availableIlceler = hasZones
+    ? [...new Set(zones.filter((z) => z.il === form.il).map((z) => z.ilce))].sort((a, b) => a.localeCompare(b, "tr"))
+    : getIlceler(form.il);
+
+  // Mahalleler (sadece bölge tanımlıysa)
   const filteredMahalleler = hasZones
     ? zones.filter((z) => z.il === form.il && z.ilce === form.ilce).flatMap((z) => z.mahalleler)
     : [];
@@ -68,25 +75,24 @@ const OrderPage = () => {
 
   // Tek seçenek varsa otomatik seç
   useEffect(() => {
-    if (!hasZones) return;
-    if (uniqueIller.length === 1 && form.il !== uniqueIller[0]) {
-      setForm((prev) => ({ ...prev, il: uniqueIller[0], ilce: "", mahalle: "" }));
+    if (availableIller.length === 1 && form.il !== availableIller[0]) {
+      setForm((prev) => ({ ...prev, il: availableIller[0], ilce: "", mahalle: "" }));
     }
-  }, [hasZones, uniqueIller]);
+  }, [availableIller]);
 
   useEffect(() => {
-    if (!hasZones || !form.il) return;
-    if (filteredIlceler.length === 1 && form.ilce !== filteredIlceler[0]) {
-      setForm((prev) => ({ ...prev, ilce: filteredIlceler[0], mahalle: "" }));
+    if (!form.il) return;
+    if (availableIlceler.length === 1 && form.ilce !== availableIlceler[0]) {
+      setForm((prev) => ({ ...prev, ilce: availableIlceler[0], mahalle: "" }));
     }
-  }, [hasZones, form.il, filteredIlceler]);
+  }, [form.il, availableIlceler]);
 
   useEffect(() => {
-    if (!hasZones || !form.ilce) return;
+    if (!form.ilce || !hasMahalleler) return;
     if (filteredMahalleler.length === 1 && form.mahalle !== filteredMahalleler[0]) {
       setForm((prev) => ({ ...prev, mahalle: filteredMahalleler[0] }));
     }
-  }, [hasZones, form.ilce, filteredMahalleler]);
+  }, [form.ilce, filteredMahalleler]);
 
   const updateField = (field: string, value: string) => {
     setForm((prev) => {
@@ -100,21 +106,15 @@ const OrderPage = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.phone || !form.address || !form.product || !form.timeSlot || !date) {
+    if (!form.name || !form.email || !form.phone || !form.il || !form.ilce || !form.address || !form.product || !form.timeSlot || !date) {
       toast.error("Lütfen tüm zorunlu alanları doldurun");
       return;
     }
     // Bölge kontrolü
-    if (hasZones) {
-      if (!form.il || !form.ilce) {
-        toast.error("Lütfen il ve ilçe seçin");
-        return;
-      }
-      if (!isAddressAllowed(form.il, form.ilce, form.mahalle)) {
-        setAddressWarning("Seçtiğiniz bölgeye teslimat yapılmamaktadır.");
-        toast.error("Bu bölgeye teslimat yapılmamaktadır");
-        return;
-      }
+    if (hasZones && !isAddressAllowed(form.il, form.ilce, form.mahalle)) {
+      setAddressWarning("Seçtiğiniz bölgeye teslimat yapılmamaktadır.");
+      toast.error("Bu bölgeye teslimat yapılmamaktadır");
+      return;
     }
     const orders = JSON.parse(localStorage.getItem("milk-orders") || "[]");
     orders.push({
@@ -188,53 +188,49 @@ const OrderPage = () => {
                   <Input id="phone" type="tel" placeholder="+90 555 123 4567" value={form.phone} onChange={(e) => updateField("phone", e.target.value)} required />
                 </div>
 
-                {/* Bölge Seçimi (admin tanımladıysa) */}
-                {hasZones && (
-                  <>
-                    <div className="grid sm:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label>İl *</Label>
-                        <Select value={form.il} onValueChange={(v) => updateField("il", v)}>
-                          <SelectTrigger><SelectValue placeholder="İl seçin" /></SelectTrigger>
-                          <SelectContent>
-                            {uniqueIller.map((il) => (
-                              <SelectItem key={il} value={il}>{il}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>İlçe *</Label>
-                        <Select value={form.ilce} onValueChange={(v) => updateField("ilce", v)} disabled={!form.il}>
-                          <SelectTrigger><SelectValue placeholder="İlçe seçin" /></SelectTrigger>
-                          <SelectContent>
-                            {filteredIlceler.map((ilce) => (
-                              <SelectItem key={ilce} value={ilce}>{ilce}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {hasMahalleler && (
-                        <div className="space-y-2">
-                          <Label>Mahalle *</Label>
-                          <Select value={form.mahalle} onValueChange={(v) => updateField("mahalle", v)} disabled={!form.ilce}>
-                            <SelectTrigger><SelectValue placeholder="Mahalle seçin" /></SelectTrigger>
-                            <SelectContent>
-                              {filteredMahalleler.map((m) => (
-                                <SelectItem key={m} value={m}>{m}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
+                {/* Bölge Seçimi — her zaman görünür */}
+                <div className="grid sm:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>İl *</Label>
+                    <Select value={form.il} onValueChange={(v) => updateField("il", v)}>
+                      <SelectTrigger><SelectValue placeholder="İl seçin" /></SelectTrigger>
+                      <SelectContent>
+                        {availableIller.map((il) => (
+                          <SelectItem key={il} value={il}>{il}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>İlçe *</Label>
+                    <Select value={form.ilce} onValueChange={(v) => updateField("ilce", v)} disabled={!form.il}>
+                      <SelectTrigger><SelectValue placeholder="İlçe seçin" /></SelectTrigger>
+                      <SelectContent>
+                        {availableIlceler.map((ilce) => (
+                          <SelectItem key={ilce} value={ilce}>{ilce}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {hasMahalleler && (
+                    <div className="space-y-2">
+                      <Label>Mahalle *</Label>
+                      <Select value={form.mahalle} onValueChange={(v) => updateField("mahalle", v)} disabled={!form.ilce}>
+                        <SelectTrigger><SelectValue placeholder="Mahalle seçin" /></SelectTrigger>
+                        <SelectContent>
+                          {filteredMahalleler.map((m) => (
+                            <SelectItem key={m} value={m}>{m}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    {addressWarning && (
-                      <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-lg p-3">
-                        <AlertTriangle className="h-4 w-4 shrink-0" />
-                        {addressWarning}
-                      </div>
-                    )}
-                  </>
+                  )}
+                </div>
+                {addressWarning && (
+                  <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-lg p-3">
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    {addressWarning}
+                  </div>
                 )}
 
                 <div className="space-y-2">
