@@ -12,23 +12,23 @@ const Navbar = () => {
         <Link to="/" className="flex items-center gap-2">
           <Milk className="h-8 w-8 text-primary" />
           <span className="text-xl font-bold font-heading text-foreground" style={{ fontFamily: 'var(--font-heading)' }}>
-            FreshFarm Milk
+            Sade Süt
           </span>
         </Link>
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-6">
           <Link to="/" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
-            Home
+            Ana Sayfa
           </Link>
           <Link to="/order" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
-            Order Now
+            Sipariş Ver
           </Link>
           <Link to="/member" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
-            Members
+            Üyeler
           </Link>
           <Link to="/order">
-            <Button variant="default" size="sm">Reserve Milk</Button>
+            <Button variant="default" size="sm">Süt Rezerve Et</Button>
           </Link>
         </div>
 
@@ -42,16 +42,16 @@ const Navbar = () => {
       {isOpen && (
         <div className="md:hidden bg-background border-b border-border px-4 pb-4 space-y-3">
           <Link to="/" onClick={() => setIsOpen(false)} className="block text-sm font-medium text-foreground py-2">
-            Home
+            Ana Sayfa
           </Link>
           <Link to="/order" onClick={() => setIsOpen(false)} className="block text-sm font-medium text-foreground py-2">
-            Order Now
+            Sipariş Ver
           </Link>
           <Link to="/member" onClick={() => setIsOpen(false)} className="block text-sm font-medium text-foreground py-2">
-            Members
+            Üyeler
           </Link>
           <Link to="/order" onClick={() => setIsOpen(false)}>
-            <Button variant="default" size="sm" className="w-full">Reserve Milk</Button>
+            <Button variant="default" size="sm" className="w-full">Süt Rezerve Et</Button>
           </Link>
         </div>
       )}

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 import { CalendarIcon, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -23,9 +24,9 @@ const timeSlots = [
 ];
 
 const products = [
-  { id: "glass-1l", name: "1 Liter Glass Bottle", size: "1L" },
-  { id: "pet-3l", name: "3 Liter PET Bottle", size: "3L" },
-  { id: "pet-5l", name: "5 Liter PET Bottle", size: "5L" },
+  { id: "glass-1l", name: "1 Litre Cam Şişe", size: "1L" },
+  { id: "pet-3l", name: "3 Litre PET Şişe", size: "3L" },
+  { id: "pet-5l", name: "5 Litre PET Şişe", size: "5L" },
 ];
 
 const OrderPage = () => {
@@ -49,10 +50,9 @@ const OrderPage = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.phone || !form.address || !form.product || !form.timeSlot || !date) {
-      toast.error("Please fill in all required fields");
+      toast.error("Lütfen tüm zorunlu alanları doldurun");
       return;
     }
-    // For now, store in localStorage
     const orders = JSON.parse(localStorage.getItem("milk-orders") || "[]");
     orders.push({
       ...form,
@@ -62,7 +62,7 @@ const OrderPage = () => {
     });
     localStorage.setItem("milk-orders", JSON.stringify(orders));
     setSubmitted(true);
-    toast.success("Your reservation has been placed!");
+    toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
   };
 
   if (submitted) {
@@ -73,15 +73,15 @@ const OrderPage = () => {
           <div className="text-center max-w-md">
             <CheckCircle className="h-16 w-16 text-primary mx-auto mb-6" />
             <h2 className="text-3xl font-bold text-foreground mb-4" style={{ fontFamily: 'var(--font-heading)' }}>
-              Reservation Confirmed!
+              Rezervasyon Onaylandı!
             </h2>
             <p className="text-muted-foreground mb-8">
-              Thank you for your order. We'll deliver your fresh milk on{" "}
-              <strong>{date && format(date, "PPP")}</strong> during{" "}
-              <strong>{form.timeSlot}</strong>.
+              Siparişiniz için teşekkür ederiz. Taze sütünüz{" "}
+              <strong>{date && format(date, "d MMMM yyyy", { locale: tr })}</strong> tarihinde{" "}
+              <strong>{form.timeSlot}</strong> saatleri arasında teslim edilecektir.
             </p>
             <Button onClick={() => { setSubmitted(false); setForm({ name: "", email: "", phone: "", address: "", product: "", timeSlot: "", quantity: "1", notes: "" }); setDate(undefined); }}>
-              Place Another Order
+              Yeni Sipariş Ver
             </Button>
           </div>
         </div>
@@ -96,49 +96,49 @@ const OrderPage = () => {
       <div className="pt-24 pb-20">
         <div className="container mx-auto px-4 max-w-2xl">
           <div className="text-center mb-10">
-            <p className="text-sm uppercase tracking-widest text-accent font-semibold mb-3">Reservation</p>
+            <p className="text-sm uppercase tracking-widest text-accent font-semibold mb-3">Rezervasyon</p>
             <h1 className="text-3xl md:text-4xl font-bold text-foreground" style={{ fontFamily: 'var(--font-heading)' }}>
-              Reserve Your Fresh Milk
+              Taze Sütünüzü Rezerve Edin
             </h1>
-            <p className="text-muted-foreground mt-3">Fill in your details and we'll deliver right to your door.</p>
+            <p className="text-muted-foreground mt-3">Bilgilerinizi doldurun, biz kapınıza kadar getirelim.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6 bg-card rounded-2xl p-6 md:p-10" style={{ boxShadow: 'var(--shadow-elevated)' }}>
-            {/* Personal Info */}
+            {/* Kişisel Bilgiler */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-heading)' }}>Your Details</h3>
+              <h3 className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-heading)' }}>Kişisel Bilgileriniz</h3>
 
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name *</Label>
-                  <Input id="name" placeholder="John Doe" value={form.name} onChange={(e) => updateField("name", e.target.value)} required />
+                  <Label htmlFor="name">Ad Soyad *</Label>
+                  <Input id="name" placeholder="Ahmet Yılmaz" value={form.name} onChange={(e) => updateField("name", e.target.value)} required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email Address *</Label>
-                  <Input id="email" type="email" placeholder="john@example.com" value={form.email} onChange={(e) => updateField("email", e.target.value)} required />
+                  <Label htmlFor="email">E-posta Adresi *</Label>
+                  <Input id="email" type="email" placeholder="ahmet@ornek.com" value={form.email} onChange={(e) => updateField("email", e.target.value)} required />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number *</Label>
+                <Label htmlFor="phone">Telefon Numarası *</Label>
                 <Input id="phone" type="tel" placeholder="+90 555 123 4567" value={form.phone} onChange={(e) => updateField("phone", e.target.value)} required />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="address">Delivery Address *</Label>
-                <Textarea id="address" placeholder="Your full delivery address" value={form.address} onChange={(e) => updateField("address", e.target.value)} required rows={3} />
+                <Label htmlFor="address">Teslimat Adresi *</Label>
+                <Textarea id="address" placeholder="Tam teslimat adresinizi yazın" value={form.address} onChange={(e) => updateField("address", e.target.value)} required rows={3} />
               </div>
             </div>
 
-            {/* Product Selection */}
+            {/* Ürün Seçimi */}
             <div className="space-y-4 pt-4 border-t border-border">
-              <h3 className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-heading)' }}>Product & Delivery</h3>
+              <h3 className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-heading)' }}>Ürün & Teslimat</h3>
 
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Product *</Label>
+                  <Label>Ürün *</Label>
                   <Select value={form.product} onValueChange={(v) => updateField("product", v)}>
-                    <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Ürün seçin" /></SelectTrigger>
                     <SelectContent>
                       {products.map((p) => (
                         <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
@@ -147,7 +147,7 @@ const OrderPage = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Quantity</Label>
+                  <Label>Adet</Label>
                   <Select value={form.quantity} onValueChange={(v) => updateField("quantity", v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -161,12 +161,12 @@ const OrderPage = () => {
 
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Delivery Date *</Label>
+                  <Label>Teslimat Tarihi *</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date ? format(date, "PPP") : "Pick a date"}
+                        {date ? format(date, "d MMMM yyyy", { locale: tr }) : "Tarih seçin"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -182,9 +182,9 @@ const OrderPage = () => {
                   </Popover>
                 </div>
                 <div className="space-y-2">
-                  <Label>Delivery Time *</Label>
+                  <Label>Teslimat Saati *</Label>
                   <Select value={form.timeSlot} onValueChange={(v) => updateField("timeSlot", v)}>
-                    <SelectTrigger><SelectValue placeholder="Select time" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Saat seçin" /></SelectTrigger>
                     <SelectContent>
                       {timeSlots.map((t) => (
                         <SelectItem key={t} value={t}>{t}</SelectItem>
@@ -195,15 +195,15 @@ const OrderPage = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes">Notes (optional)</Label>
-                <Textarea id="notes" placeholder="Any special instructions..." value={form.notes} onChange={(e) => updateField("notes", e.target.value)} rows={2} />
+                <Label htmlFor="notes">Notlar (isteğe bağlı)</Label>
+                <Textarea id="notes" placeholder="Özel talimatlarınız varsa yazın..." value={form.notes} onChange={(e) => updateField("notes", e.target.value)} rows={2} />
               </div>
             </div>
 
             <Button type="submit" size="lg" className="w-full py-6 text-base font-semibold">
-              Place Reservation
+              Rezervasyonu Tamamla
             </Button>
-            <p className="text-xs text-muted-foreground text-center">No payment required. Pay on delivery.</p>
+            <p className="text-xs text-muted-foreground text-center">Ödeme gerekli değildir. Kapıda ödeme yapılır.</p>
           </form>
         </div>
       </div>

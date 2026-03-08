@@ -6,21 +6,21 @@ import milkPet5 from "@/assets/milk-pet-5l.png";
 
 const products = [
   {
-    name: "Glass Bottle",
-    size: "1 Liter",
-    description: "Classic glass bottle — perfect for daily freshness. Eco-friendly and reusable.",
+    name: "Cam Şişe",
+    size: "1 Litre",
+    description: "Klasik cam şişe — günlük tazelik için ideal. Çevre dostu ve yeniden kullanılabilir.",
     image: milkGlass,
   },
   {
-    name: "PET Bottle",
-    size: "3 Liters",
-    description: "Great for families. Convenient PET packaging keeps milk fresh longer.",
+    name: "PET Şişe",
+    size: "3 Litre",
+    description: "Aileler için harika. Pratik PET ambalaj sütü daha uzun süre taze tutar.",
     image: milkPet3,
   },
   {
-    name: "PET Bottle",
-    size: "5 Liters",
-    description: "Best value for large families or weekly supply. Fresh farm milk in bulk.",
+    name: "PET Şişe",
+    size: "5 Litre",
+    description: "Kalabalık aileler veya haftalık ihtiyaç için en uygun seçenek. Toptan taze çiftlik sütü.",
     image: milkPet5,
   },
 ];
@@ -30,9 +30,9 @@ const ProductShowcase = () => {
     <section id="products" className="py-20 md:py-28 bg-card">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <p className="text-sm uppercase tracking-widest text-accent font-semibold mb-3">Our Products</p>
+          <p className="text-sm uppercase tracking-widest text-accent font-semibold mb-3">Ürünlerimiz</p>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground" style={{ fontFamily: 'var(--font-heading)' }}>
-            Choose Your Fresh Milk
+            Taze Sütünüzü Seçin
           </h2>
         </div>
         <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -51,7 +51,7 @@ const ProductShowcase = () => {
               <p className="text-2xl font-bold text-primary mb-3">{product.size}</p>
               <p className="text-muted-foreground text-sm leading-relaxed mb-6">{product.description}</p>
               <Link to="/order">
-                <Button variant="default" className="w-full">Reserve</Button>
+                <Button variant="default" className="w-full">Rezerve Et</Button>
               </Link>
             </div>
           ))}
