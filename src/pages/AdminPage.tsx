@@ -82,6 +82,36 @@ type AdminOrder = OrderRow & {
   items: OrderItemRow[];
 };
 
+const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([]);
+const [adminsLoading, setAdminsLoading] = useState(false);
+
+const [newAdminEmail, setNewAdminEmail] = useState("");
+const [newAdminName, setNewAdminName] = useState("");
+const [newAdminRole, setNewAdminRole] = useState<AdminRole>("operations_admin");
+const [creatingAdmin, setCreatingAdmin] = useState(false);
+
+const loadAdminUsers = async () => {
+  if (adminUser?.role !== "super_admin") return;
+
+  setAdminsLoading(true);
+
+  try {
+    const { data, error } = await supabase
+      .from("admin_users")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    setAdminUsers(data || []);
+  } catch (error: any) {
+    console.error("Admin kullanıcılar alınamadı:", error);
+    toast.error(error.message || "Admin kullanıcılar yüklenemedi");
+  } finally {
+    setAdminsLoading(false);
+  }
+};
+
 const statusConfig: Record<OrderStatus, { label: string; icon: React.ElementType; color: string }> = {
   pending: { label: "Beklemede", icon: Clock, color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
   approved: { label: "Onaylandı", icon: CheckCircle2, color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
@@ -245,6 +275,14 @@ const AdminPage = () => {
 
         setAdminUser(adminData);
         setAuthorized(true);
+        if (adminData.role === "super_admin") {
+  await loadAdminUsers();
+}
+        useEffect(() => {
+  if (authorized && adminUser?.role === "super_admin") {
+    loadAdminUsers();
+  }
+}, [authorized, adminUser?.role]);
         await loadOrders();
       } catch (error: any) {
         console.error("Admin yetki kontrolü hatası:", error);
@@ -265,6 +303,55 @@ const AdminPage = () => {
     window.location.href = "/";
   };
 
+  const createAdminUser = async () => {
+  if (adminUser?.role !== "super_admin") {
+    toast.error("Bu işlem için yetkiniz yok");
+    return;
+  }
+
+  if (!newAdminEmail.trim()) {
+    toast.error("E-posta adresi gerekli");
+    return;
+  }
+
+  setCreatingAdmin(true);
+
+  try {
+    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+
+    if (authError) throw authError;
+
+    const matchedUser = authUsers.users.find(
+      (u) => u.email?.toLowerCase() === newAdminEmail.trim().toLowerCase()
+    );
+
+    if (!matchedUser) {
+      throw new Error("Bu e-posta ile kayıtlı bir kullanıcı bulunamadı");
+    }
+
+    const { error: insertError } = await supabase.from("admin_users").upsert({
+      auth_user_id: matchedUser.id,
+      email: matchedUser.email,
+      full_name: newAdminName || matchedUser.user_metadata?.full_name || null,
+      role: newAdminRole,
+      is_active: true,
+    });
+
+    if (insertError) throw insertError;
+
+    toast.success("Admin kullanıcı eklendi");
+    setNewAdminEmail("");
+    setNewAdminName("");
+    setNewAdminRole("operations_admin");
+    await loadAdminUsers();
+  } catch (error: any) {
+    console.error(error);
+    toast.error(error.message || "Admin kullanıcı eklenemedi");
+  } finally {
+    setCreatingAdmin(false);
+  }
+};
+  
   const updateStatus = async (id: string, status: OrderStatus) => {
     try {
       const { error } = await supabase
