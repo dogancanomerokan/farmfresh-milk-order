@@ -187,7 +187,7 @@ const OrderPage = () => {
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
         .insert({
-          user_id: user?.id ?? null
+          user_id: user?.id ?? null,
           guest_name: form.name,
           guest_email: form.email,
           guest_phone: form.phone,
