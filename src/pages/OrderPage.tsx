@@ -293,7 +293,7 @@ const OrderPage = () => {
   ) : (
     products.map((p) => (
       <SelectItem key={p.id} value={p.id}>
-        {p.name} — {p.price} ₺ / {p.unit}
+        {p.name} — {p.unit} / {p.price} ₺  
       </SelectItem>
     ))
   )}
