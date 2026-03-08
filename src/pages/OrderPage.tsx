@@ -16,7 +16,7 @@ import Footer from "@/components/Footer";
 import OrderSummary from "@/components/OrderSummary";
 import { getDeliveryZones, isAddressAllowed, DeliveryZone } from "@/lib/delivery-zones";
 import { getIller, getIlceler } from "@/lib/turkey-data";
-import { getMahalleler, hasMahalleData } from "@/lib/mahalle-data";
+import { getMahalleler } from "@/lib/mahalle-data";
 import { supabase } from "@/lib/supabaseClient";
 
 const timeSlots = [
@@ -43,8 +43,8 @@ const OrderPage = () => {
   const [addressWarning, setAddressWarning] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
+
   const [form, setForm] = useState({
-    
     name: "",
     email: "",
     phone: "",
@@ -63,110 +63,126 @@ const OrderPage = () => {
   }, []);
 
   useEffect(() => {
-  const loadProducts = async () => {
-    setLoadingProducts(true);
+    const loadProducts = async () => {
+      setLoadingProducts(true);
 
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .eq("active", true)
-      .order("created_at", { ascending: true });
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("active", true)
+        .order("created_at", { ascending: true });
 
-    if (error) {
-      console.error("Ürünler alınamadı:", error.message);
-      toast.error("Ürünler yüklenemedi");
-      setProducts([]);
-    } else {
-      setProducts(data || []);
-    }
+      if (error) {
+        console.error("Ürünler alınamadı:", error.message);
+        toast.error("Ürünler yüklenemedi");
+        setProducts([]);
+      } else {
+        setProducts(data || []);
+      }
 
-    setLoadingProducts(false);
-  };
+      setLoadingProducts(false);
+    };
 
-  loadProducts();
-}, []);
+    loadProducts();
+  }, []);
 
   const hasZones = zones.length > 0;
 
-  // İl listesi: bölge tanımlıysa sadece izin verilenler, yoksa tüm Türkiye
   const availableIller = hasZones
     ? [...new Set(zones.map((z) => z.il))].sort((a, b) => a.localeCompare(b, "tr"))
     : getIller();
 
-  // İlçe listesi: bölge tanımlıysa sadece izin verilenler, yoksa seçilen ilin tüm ilçeleri
   const availableIlceler = hasZones
     ? [...new Set(zones.filter((z) => z.il === form.il).map((z) => z.ilce))].sort((a, b) => a.localeCompare(b, "tr"))
     : getIlceler(form.il);
 
-  // Mahalleler: admin bölge tanımından VEYA mahalle-data'dan
   const adminMahalleler = hasZones
     ? zones.filter((z) => z.il === form.il && z.ilce === form.ilce).flatMap((z) => z.mahalleler)
     : [];
-  // Mahalle-data'dan (turkey geneli, admin kısıtı yok)
-  const dataMahalleler = (form.il && form.ilce) ? getMahalleler(form.il, form.ilce) : [];
-  // Admin mahalle tanımladıysa onu kullan, yoksa data'dan al
+
+  const dataMahalleler = form.il && form.ilce ? getMahalleler(form.il, form.ilce) : [];
   const availableMahalleler = adminMahalleler.length > 0 ? adminMahalleler : dataMahalleler;
   const showMahalle = availableMahalleler.length > 0;
 
-  // Tek seçenek varsa otomatik seç
   useEffect(() => {
     if (availableIller.length === 1 && form.il !== availableIller[0]) {
       setForm((prev) => ({ ...prev, il: availableIller[0], ilce: "", mahalle: "" }));
     }
-  }, [availableIller]);
+  }, [availableIller, form.il]);
 
   useEffect(() => {
     if (!form.il) return;
     if (availableIlceler.length === 1 && form.ilce !== availableIlceler[0]) {
       setForm((prev) => ({ ...prev, ilce: availableIlceler[0], mahalle: "" }));
     }
-  }, [form.il, availableIlceler]);
+  }, [form.il, form.ilce, availableIlceler]);
 
   useEffect(() => {
     if (!form.ilce || !showMahalle) return;
     if (availableMahalleler.length === 1 && form.mahalle !== availableMahalleler[0]) {
       setForm((prev) => ({ ...prev, mahalle: availableMahalleler[0] }));
     }
-  }, [form.ilce, availableMahalleler]);
+  }, [form.ilce, form.mahalle, availableMahalleler, showMahalle]);
 
   const updateField = (field: string, value: string) => {
     setForm((prev) => {
       const next = { ...prev, [field]: value };
-      if (field === "il") { next.ilce = ""; next.mahalle = ""; }
-      if (field === "ilce") { next.mahalle = ""; }
+
+      if (field === "il") {
+        next.ilce = "";
+        next.mahalle = "";
+      }
+
+      if (field === "ilce") {
+        next.mahalle = "";
+      }
+
       return next;
     });
+
     setAddressWarning("");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.phone || !form.il || !form.ilce || !form.address || !form.product || !form.timeSlot || !date) {
+
+    if (
+      !form.name ||
+      !form.email ||
+      !form.phone ||
+      !form.il ||
+      !form.ilce ||
+      !form.address ||
+      !form.product ||
+      !form.timeSlot ||
+      !date
+    ) {
       toast.error("Lütfen tüm zorunlu alanları doldurun");
       return;
     }
-    // Bölge kontrolü
+
     if (hasZones && !isAddressAllowed(form.il, form.ilce, form.mahalle)) {
       setAddressWarning("Seçtiğiniz bölgeye teslimat yapılmamaktadır.");
       toast.error("Bu bölgeye teslimat yapılmamaktadır");
       return;
     }
+
     const orders = JSON.parse(localStorage.getItem("milk-orders") || "[]");
+
     orders.push({
       ...form,
       date: date.toISOString(),
       createdAt: new Date().toISOString(),
       id: crypto.randomUUID(),
     });
+
     localStorage.setItem("milk-orders", JSON.stringify(orders));
     setSubmitted(true);
     toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
   };
 
   const selectedProduct = products.find((p) => String(p.id) === String(form.product));
-  const quantityNumber = Number(form.quantity || 0);
-  const totalPrice = selectedProduct ? selectedProduct.price * quantityNumber : 0;
-  
+
   if (submitted) {
     return (
       <div className="min-h-screen bg-background">
@@ -174,7 +190,7 @@ const OrderPage = () => {
         <div className="pt-24 pb-20 container mx-auto px-4 flex items-center justify-center min-h-[80vh]">
           <div className="text-center max-w-md">
             <CheckCircle className="h-16 w-16 text-primary mx-auto mb-6" />
-            <h2 className="text-3xl font-bold text-foreground mb-4" style={{ fontFamily: 'var(--font-heading)' }}>
+            <h2 className="text-3xl font-bold text-foreground mb-4" style={{ fontFamily: "var(--font-heading)" }}>
               Rezervasyon Onaylandı!
             </h2>
             <p className="text-muted-foreground mb-8">
@@ -182,7 +198,25 @@ const OrderPage = () => {
               <strong>{date && format(date, "d MMMM yyyy", { locale: tr })}</strong> tarihinde{" "}
               <strong>{form.timeSlot}</strong> saatleri arasında teslim edilecektir.
             </p>
-            <Button onClick={() => { setSubmitted(false); setForm({ name: "", email: "", phone: "", il: "", ilce: "", mahalle: "", address: "", product: "", timeSlot: "", quantity: "1", notes: "" }); setDate(undefined); }}>
+            <Button
+              onClick={() => {
+                setSubmitted(false);
+                setForm({
+                  name: "",
+                  email: "",
+                  phone: "",
+                  il: "",
+                  ilce: "",
+                  mahalle: "",
+                  address: "",
+                  product: "",
+                  timeSlot: "",
+                  quantity: "1",
+                  notes: "",
+                });
+                setDate(undefined);
+              }}
+            >
               Yeni Sipariş Ver
             </Button>
           </div>
@@ -199,17 +233,18 @@ const OrderPage = () => {
         <div className="container mx-auto px-4 max-w-5xl">
           <div className="text-center mb-10">
             <p className="text-sm uppercase tracking-widest text-accent font-semibold mb-3">Rezervasyon</p>
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground" style={{ fontFamily: 'var(--font-heading)' }}>
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
               Taze Sütünüzü Rezerve Edin
             </h1>
             <p className="text-muted-foreground mt-3">Bilgilerinizi doldurun, biz kapınıza kadar getirelim.</p>
           </div>
 
           <div className="grid lg:grid-cols-3 gap-8">
-            <form onSubmit={handleSubmit} className="lg:col-span-2 space-y-6 bg-card rounded-2xl p-6 md:p-10" style={{ boxShadow: 'var(--shadow-elevated)' }}>
-              {/* Kişisel Bilgiler */}
+            <form onSubmit={handleSubmit} className="lg:col-span-2 space-y-6 bg-card rounded-2xl p-6 md:p-10" style={{ boxShadow: "var(--shadow-elevated)" }}>
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-heading)' }}>Kişisel Bilgileriniz</h3>
+                <h3 className="text-lg font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
+                  Kişisel Bilgileriniz
+                </h3>
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -227,7 +262,6 @@ const OrderPage = () => {
                   <Input id="phone" type="tel" placeholder="+90 555 123 4567" value={form.phone} onChange={(e) => updateField("phone", e.target.value)} required />
                 </div>
 
-                {/* Bölge Seçimi — her zaman görünür */}
                 <div className="grid sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>İl *</Label>
@@ -240,6 +274,7 @@ const OrderPage = () => {
                       </SelectContent>
                     </Select>
                   </div>
+
                   <div className="space-y-2">
                     <Label>İlçe *</Label>
                     <Select value={form.ilce} onValueChange={(v) => updateField("ilce", v)} disabled={!form.il}>
@@ -251,10 +286,25 @@ const OrderPage = () => {
                       </SelectContent>
                     </Select>
                   </div>
+
                   <div className="space-y-2">
                     <Label>Mahalle *</Label>
-                    <Select value={form.mahalle} onValueChange={(v) => updateField("mahalle", v)} disabled={!form.ilce || availableMahalleler.length === 0}>
-                      <SelectTrigger><SelectValue placeholder={!form.ilce ? "Önce ilçe seçin" : availableMahalleler.length === 0 ? "Mahalle verisi yok" : "Mahalle seçin"} /></SelectTrigger>
+                    <Select
+                      value={form.mahalle}
+                      onValueChange={(v) => updateField("mahalle", v)}
+                      disabled={!form.ilce || availableMahalleler.length === 0}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            !form.ilce
+                              ? "Önce ilçe seçin"
+                              : availableMahalleler.length === 0
+                              ? "Mahalle verisi yok"
+                              : "Mahalle seçin"
+                          }
+                        />
+                      </SelectTrigger>
                       <SelectContent>
                         {availableMahalleler.map((m) => (
                           <SelectItem key={m} value={m}>{m}</SelectItem>
@@ -263,6 +313,7 @@ const OrderPage = () => {
                     </Select>
                   </div>
                 </div>
+
                 {addressWarning && (
                   <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-lg p-3">
                     <AlertTriangle className="h-4 w-4 shrink-0" />
@@ -272,45 +323,56 @@ const OrderPage = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="address">Açık Adres *</Label>
-                  <Textarea id="address" placeholder="Sokak, bina no, daire no vb." value={form.address} onChange={(e) => updateField("address", e.target.value)} required rows={2} />
+                  <Textarea
+                    id="address"
+                    placeholder="Sokak, bina no, daire no vb."
+                    value={form.address}
+                    onChange={(e) => updateField("address", e.target.value)}
+                    required
+                    rows={2}
+                  />
                 </div>
               </div>
 
-              {/* Ürün Seçimi */}
               <div className="space-y-4 pt-4 border-t border-border">
-                <h3 className="text-lg font-semibold text-foreground" style={{ fontFamily: 'var(--font-heading)' }}>Ürün & Teslimat</h3>
+                <h3 className="text-lg font-semibold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
+                  Ürün & Teslimat
+                </h3>
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Ürün *</Label>
                     <Select value={form.product} onValueChange={(v) => updateField("product", v)}>
                       <SelectTrigger><SelectValue placeholder="Ürün seçin" /></SelectTrigger>
-<SelectContent>
-  {loadingProducts ? (
-    <SelectItem value="loading" disabled>
-      Ürünler yükleniyor...
-    </SelectItem>
-  ) : products.length === 0 ? (
-    <SelectItem value="empty" disabled>
-      Ürün bulunamadı
-    </SelectItem>
-  ) : (
-    products.map((p) => (
-      <SelectItem key={p.id} value={p.id}>
-        {p.name} — {p.unit} / {p.price} ₺  
-      </SelectItem>
-    ))
-  )}
-</SelectContent>
+                      <SelectContent>
+                        {loadingProducts ? (
+                          <SelectItem value="loading" disabled>
+                            Ürünler yükleniyor...
+                          </SelectItem>
+                        ) : products.length === 0 ? (
+                          <SelectItem value="empty" disabled>
+                            Ürün bulunamadı
+                          </SelectItem>
+                        ) : (
+                          products.map((p) => (
+                            <SelectItem key={p.id} value={String(p.id)}>
+                              {p.name} - {p.unit} / {p.price} TL
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
                     </Select>
                   </div>
+
                   <div className="space-y-2">
                     <Label>Adet</Label>
                     <Select value={form.quantity} onValueChange={(v) => updateField("quantity", v)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                          <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                          <SelectItem key={n} value={String(n)}>
+                            {n}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -339,6 +401,7 @@ const OrderPage = () => {
                       </PopoverContent>
                     </Popover>
                   </div>
+
                   <div className="space-y-2">
                     <Label>Teslimat Saati *</Label>
                     <Select value={form.timeSlot} onValueChange={(v) => updateField("timeSlot", v)}>
@@ -354,7 +417,13 @@ const OrderPage = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="notes">Notlar (isteğe bağlı)</Label>
-                  <Textarea id="notes" placeholder="Özel talimatlarınız varsa yazın..." value={form.notes} onChange={(e) => updateField("notes", e.target.value)} rows={2} />
+                  <Textarea
+                    id="notes"
+                    placeholder="Özel talimatlarınız varsa yazın..."
+                    value={form.notes}
+                    onChange={(e) => updateField("notes", e.target.value)}
+                    rows={2}
+                  />
                 </div>
               </div>
 
@@ -364,12 +433,8 @@ const OrderPage = () => {
               <p className="text-xs text-muted-foreground text-center">Ödeme gerekli değildir. Kapıda ödeme yapılır.</p>
             </form>
 
-            {/* Sipariş Özeti */}
             <div className="lg:col-span-1">
-              <OrderSummary
-  product={selectedProduct}
-  quantity={form.quantity}
-/>
+              <OrderSummary product={selectedProduct} quantity={form.quantity} />
             </div>
           </div>
         </div>
