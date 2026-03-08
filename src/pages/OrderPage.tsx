@@ -178,9 +178,7 @@ const OrderPage = () => {
     }
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
 
       const quantityNumber = Number(form.quantity || 1);
       const unitPrice = Number(selectedProduct.price || 0);
@@ -189,7 +187,7 @@ const OrderPage = () => {
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
         .insert({
-          user_id: user?.id || null,
+          user_id: user?.id ?? null
           guest_name: form.name,
           guest_email: form.email,
           guest_phone: form.phone,
