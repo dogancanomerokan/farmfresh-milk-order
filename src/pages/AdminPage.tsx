@@ -14,9 +14,11 @@ import {
   LogOut,
   ShieldAlert,
   Trash2,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -80,36 +82,6 @@ type OrderItemRow = {
 
 type AdminOrder = OrderRow & {
   items: OrderItemRow[];
-};
-
-const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([]);
-const [adminsLoading, setAdminsLoading] = useState(false);
-
-const [newAdminEmail, setNewAdminEmail] = useState("");
-const [newAdminName, setNewAdminName] = useState("");
-const [newAdminRole, setNewAdminRole] = useState<AdminRole>("operations_admin");
-const [creatingAdmin, setCreatingAdmin] = useState(false);
-
-const loadAdminUsers = async () => {
-  if (adminUser?.role !== "super_admin") return;
-
-  setAdminsLoading(true);
-
-  try {
-    const { data, error } = await supabase
-      .from("admin_users")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-
-    setAdminUsers(data || []);
-  } catch (error: any) {
-    console.error("Admin kullanıcılar alınamadı:", error);
-    toast.error(error.message || "Admin kullanıcılar yüklenemedi");
-  } finally {
-    setAdminsLoading(false);
-  }
 };
 
 const statusConfig: Record<OrderStatus, { label: string; icon: React.ElementType; color: string }> = {
@@ -191,6 +163,14 @@ const AdminPage = () => {
   const [dateFrom, setDateFrom] = useState<Date>();
   const [dateTo, setDateTo] = useState<Date>();
 
+  const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([]);
+  const [adminsLoading, setAdminsLoading] = useState(false);
+
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminName, setNewAdminName] = useState("");
+  const [newAdminRole, setNewAdminRole] = useState<AdminRole>("operations_admin");
+  const [creatingAdmin, setCreatingAdmin] = useState(false);
+
   const loadOrders = async () => {
     setOrdersLoading(true);
 
@@ -231,6 +211,28 @@ const AdminPage = () => {
     }
   };
 
+  const loadAdminUsers = async () => {
+    if (adminUser?.role !== "super_admin") return;
+
+    setAdminsLoading(true);
+
+    try {
+      const { data, error } = await supabase
+        .from("admin_users")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setAdminUsers(data || []);
+    } catch (error: any) {
+      console.error("Admin kullanıcılar alınamadı:", error);
+      toast.error(error.message || "Admin kullanıcılar yüklenemedi");
+    } finally {
+      setAdminsLoading(false);
+    }
+  };
+
   useEffect(() => {
     const checkAdminAccess = async () => {
       setLoading(true);
@@ -262,9 +264,7 @@ const AdminPage = () => {
           .eq("is_active", true)
           .maybeSingle();
 
-        if (adminError) {
-          throw adminError;
-        }
+        if (adminError) throw adminError;
 
         if (!adminData) {
           setAuthorized(false);
@@ -275,14 +275,6 @@ const AdminPage = () => {
 
         setAdminUser(adminData);
         setAuthorized(true);
-        if (adminData.role === "super_admin") {
-  await loadAdminUsers();
-}
-        useEffect(() => {
-  if (authorized && adminUser?.role === "super_admin") {
-    loadAdminUsers();
-  }
-}, [authorized, adminUser?.role]);
         await loadOrders();
       } catch (error: any) {
         console.error("Admin yetki kontrolü hatası:", error);
@@ -297,100 +289,18 @@ const AdminPage = () => {
     checkAdminAccess();
   }, []);
 
+  useEffect(() => {
+    if (authorized && adminUser?.role === "super_admin") {
+      loadAdminUsers();
+    }
+  }, [authorized, adminUser?.role]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.info("Çıkış yapıldı");
     window.location.href = "/";
   };
 
-  const createAdminUser = async () => {
-  if (adminUser?.role !== "super_admin") {
-    toast.error("Bu işlem için yetkiniz yok");
-    return;
-  }
-
-  if (!newAdminEmail.trim()) {
-    toast.error("E-posta adresi gerekli");
-    return;
-  }
-
-  setCreatingAdmin(true);
-
-  try {
-    const { data: profileMatches, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, full_name")
-      .ilike("id", "%");
-
-    if (profileError) throw profileError;
-
-    const { data: authUserResult, error: authLookupError } = await supabase
-      .from("admin_users")
-      .select("email")
-      .eq("email", newAdminEmail.trim().toLowerCase());
-
-    if (authLookupError) throw authLookupError;
-
-    const alreadyExists = (authUserResult || []).some(
-      (item) => item.email.toLowerCase() === newAdminEmail.trim().toLowerCase()
-    );
-
-    if (alreadyExists) {
-      throw new Error("Bu kullanıcı zaten admin listesinde");
-    }
-
-    throw new Error("Bu adım için kullanıcıyı auth.users ile eşleyen güvenli bir backend fonksiyon kurmamız gerekiyor.");
-  } catch (error: any) {
-    console.error(error);
-    toast.error(error.message || "Admin kullanıcı eklenemedi");
-  } finally {
-    setCreatingAdmin(false);
-  }
-};
-
-  if (!newAdminEmail.trim()) {
-    toast.error("E-posta adresi gerekli");
-    return;
-  }
-
-  setCreatingAdmin(true);
-
-  try {
-    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-
-    if (authError) throw authError;
-
-    const matchedUser = authUsers.users.find(
-      (u) => u.email?.toLowerCase() === newAdminEmail.trim().toLowerCase()
-    );
-
-    if (!matchedUser) {
-      throw new Error("Bu e-posta ile kayıtlı bir kullanıcı bulunamadı");
-    }
-
-    const { error: insertError } = await supabase.from("admin_users").upsert({
-      auth_user_id: matchedUser.id,
-      email: matchedUser.email,
-      full_name: newAdminName || matchedUser.user_metadata?.full_name || null,
-      role: newAdminRole,
-      is_active: true,
-    });
-
-    if (insertError) throw insertError;
-
-    toast.success("Admin kullanıcı eklendi");
-    setNewAdminEmail("");
-    setNewAdminName("");
-    setNewAdminRole("operations_admin");
-    await loadAdminUsers();
-  } catch (error: any) {
-    console.error(error);
-    toast.error(error.message || "Admin kullanıcı eklenemedi");
-  } finally {
-    setCreatingAdmin(false);
-  }
-};
-  
   const updateStatus = async (id: string, status: OrderStatus) => {
     try {
       const { error } = await supabase
@@ -433,6 +343,91 @@ const AdminPage = () => {
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || "Sipariş silinemedi");
+    }
+  };
+
+  const createAdminUser = async () => {
+    if (adminUser?.role !== "super_admin") {
+      toast.error("Bu işlem için yetkiniz yok");
+      return;
+    }
+
+    if (!newAdminEmail.trim()) {
+      toast.error("E-posta adresi gerekli");
+      return;
+    }
+
+    setCreatingAdmin(true);
+
+    try {
+      const { error } = await supabase.rpc("add_admin_user_by_email", {
+        target_email: newAdminEmail.trim().toLowerCase(),
+        target_full_name: newAdminName.trim(),
+        target_role: newAdminRole,
+      });
+
+      if (error) throw error;
+
+      toast.success("Admin kullanıcı eklendi");
+      setNewAdminEmail("");
+      setNewAdminName("");
+      setNewAdminRole("operations_admin");
+      await loadAdminUsers();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "Admin kullanıcı eklenemedi");
+    } finally {
+      setCreatingAdmin(false);
+    }
+  };
+
+  const updateAdminRole = async (id: string, role: AdminRole) => {
+    if (adminUser?.role !== "super_admin") {
+      toast.error("Bu işlem için yetkiniz yok");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("admin_users")
+        .update({ role })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setAdminUsers((prev) =>
+        prev.map((u) => (u.id === id ? { ...u, role } : u))
+      );
+
+      toast.success("Admin rolü güncellendi");
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "Rol güncellenemedi");
+    }
+  };
+
+  const toggleAdminActive = async (id: string, isActive: boolean) => {
+    if (adminUser?.role !== "super_admin") {
+      toast.error("Bu işlem için yetkiniz yok");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("admin_users")
+        .update({ is_active: !isActive })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setAdminUsers((prev) =>
+        prev.map((u) => (u.id === id ? { ...u, is_active: !isActive } : u))
+      );
+
+      toast.success("Admin durumu güncellendi");
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "Durum güncellenemedi");
     }
   };
 
@@ -701,6 +696,90 @@ const AdminPage = () => {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Admin kullanıcı yönetimi */}
+          {adminUser.role === "super_admin" && (
+            <div className="mt-10 bg-card rounded-xl p-5 md:p-6" style={{ boxShadow: "var(--shadow-card)" }}>
+              <div className="mb-6 flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
+                    Admin Kullanıcı Yönetimi
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Yeni admin ekleyin, rollerini değiştirin veya pasife alın.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-4 gap-3 mb-6">
+                <Input
+                  placeholder="E-posta"
+                  value={newAdminEmail}
+                  onChange={(e) => setNewAdminEmail(e.target.value)}
+                />
+                <Input
+                  placeholder="Ad Soyad"
+                  value={newAdminName}
+                  onChange={(e) => setNewAdminName(e.target.value)}
+                />
+                <Select value={newAdminRole} onValueChange={(v) => setNewAdminRole(v as AdminRole)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="operations_admin">Operations Admin</SelectItem>
+                    <SelectItem value="super_admin">Super Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={createAdminUser} disabled={creatingAdmin}>
+                  {creatingAdmin ? "Ekleniyor..." : "Admin Ekle"}
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                {adminsLoading ? (
+                  <p className="text-sm text-muted-foreground">Admin kullanıcılar yükleniyor...</p>
+                ) : adminUsers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Henüz admin kullanıcı bulunmuyor.</p>
+                ) : (
+                  adminUsers.map((admin) => (
+                    <div
+                      key={admin.id}
+                      className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border border-border rounded-lg p-4"
+                    >
+                      <div>
+                        <p className="font-semibold text-foreground">{admin.full_name || "İsimsiz Admin"}</p>
+                        <p className="text-sm text-muted-foreground">{admin.email}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Oluşturulma: {format(parseISO(admin.created_at), "d MMM yyyy HH:mm", { locale: tr })}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col md:flex-row gap-2 md:items-center">
+                        <Select value={admin.role} onValueChange={(v) => updateAdminRole(admin.id, v as AdminRole)}>
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="operations_admin">Operations Admin</SelectItem>
+                            <SelectItem value="super_admin">Super Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        <Button
+                          variant={admin.is_active ? "outline" : "default"}
+                          onClick={() => toggleAdminActive(admin.id, admin.is_active)}
+                        >
+                          {admin.is_active ? "Pasife Al" : "Aktif Et"}
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           )}
 
