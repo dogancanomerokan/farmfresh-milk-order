@@ -11,13 +11,12 @@ import {
   Filter,
   RefreshCw,
   Download,
-  Lock,
   LogOut,
+  ShieldAlert,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,10 +27,25 @@ import Footer from "@/components/Footer";
 import DeliveryZoneManager from "@/components/DeliveryZoneManager";
 import { supabase } from "@/lib/supabaseClient";
 
-// ⚠️ Geçici admin koruması — sonra gerçek admin auth yapacağız
-const ADMIN_PASSWORD = "sadesut2024";
+type OrderStatus =
+  | "pending"
+  | "approved"
+  | "preparing"
+  | "delivering"
+  | "delivered"
+  | "cancelled";
 
-type OrderStatus = "pending" | "approved" | "preparing" | "delivering" | "delivered" | "cancelled";
+type AdminRole = "operations_admin" | "super_admin";
+
+type AdminUserRow = {
+  id: string;
+  auth_user_id: string;
+  email: string;
+  full_name: string | null;
+  role: AdminRole;
+  is_active: boolean;
+  created_at: string;
+};
 
 type OrderRow = {
   id: string;
@@ -77,7 +91,6 @@ const statusConfig: Record<OrderStatus, { label: string; icon: React.ElementType
   cancelled: { label: "İptal", icon: XCircle, color: "bg-red-100 text-red-800 border-red-200" },
 };
 
-/* ─── CSV Export ─── */
 const exportToCSV = (orders: AdminOrder[]) => {
   const headers = [
     "Sipariş ID",
@@ -136,73 +149,20 @@ const exportToCSV = (orders: AdminOrder[]) => {
   toast.success("CSV dosyası indirildi");
 };
 
-/* ─── Login Screen ─── */
-const AdminLogin = ({ onLogin }: { onLogin: () => void }) => {
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState(false);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      sessionStorage.setItem("admin-auth", "true");
-      onLogin();
-    } else {
-      setError(true);
-      toast.error("Yanlış şifre!");
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="pt-24 pb-20 flex items-center justify-center min-h-[80vh]">
-        <div className="w-full max-w-sm bg-card rounded-2xl p-8" style={{ boxShadow: "var(--shadow-elevated)" }}>
-          <div className="text-center mb-6">
-            <Lock className="h-10 w-10 text-primary mx-auto mb-3" />
-            <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
-              Yönetici Girişi
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">Panele erişmek için şifrenizi girin</p>
-          </div>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="admin-pw">Şifre</Label>
-              <Input
-                id="admin-pw"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setError(false);
-                }}
-                className={error ? "border-destructive" : ""}
-                autoFocus
-              />
-              {error && <p className="text-xs text-destructive">Şifre hatalı, tekrar deneyin.</p>}
-            </div>
-            <Button type="submit" className="w-full">
-              Giriş Yap
-            </Button>
-          </form>
-        </div>
-      </div>
-      <Footer />
-    </div>
-  );
-};
-
-/* ─── Admin Dashboard ─── */
 const AdminPage = () => {
-  const [authenticated, setAuthenticated] = useState(() => sessionStorage.getItem("admin-auth") === "true");
+  const [loading, setLoading] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
+  const [adminUser, setAdminUser] = useState<AdminUserRow | null>(null);
+
   const [orders, setOrders] = useState<AdminOrder[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<Date>();
   const [dateTo, setDateTo] = useState<Date>();
 
   const loadOrders = async () => {
-    setLoading(true);
+    setOrdersLoading(true);
 
     try {
       const { data: ordersData, error: ordersError } = await supabase
@@ -237,25 +197,73 @@ const AdminPage = () => {
       console.error("Siparişler yüklenemedi:", error);
       toast.error(error.message || "Siparişler yüklenemedi");
     } finally {
-      setLoading(false);
+      setOrdersLoading(false);
     }
   };
 
   useEffect(() => {
-    if (authenticated) {
-      loadOrders();
-    }
-  }, [authenticated]);
+    const checkAdminAccess = async () => {
+      setLoading(true);
 
-  const handleLogout = () => {
-    sessionStorage.removeItem("admin-auth");
-    setAuthenticated(false);
+      try {
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+          setAuthorized(false);
+          setAdminUser(null);
+          setLoading(false);
+          return;
+        }
+
+        if (!user.email_confirmed_at) {
+          setAuthorized(false);
+          setAdminUser(null);
+          setLoading(false);
+          return;
+        }
+
+        const { data: adminData, error: adminError } = await supabase
+          .from("admin_users")
+          .select("*")
+          .eq("auth_user_id", user.id)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (adminError) {
+          throw adminError;
+        }
+
+        if (!adminData) {
+          setAuthorized(false);
+          setAdminUser(null);
+          setLoading(false);
+          return;
+        }
+
+        setAdminUser(adminData);
+        setAuthorized(true);
+        await loadOrders();
+      } catch (error: any) {
+        console.error("Admin yetki kontrolü hatası:", error);
+        toast.error(error.message || "Yetki kontrolü yapılamadı");
+        setAuthorized(false);
+        setAdminUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAdminAccess();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     toast.info("Çıkış yapıldı");
+    window.location.href = "/";
   };
-
-  if (!authenticated) {
-    return <AdminLogin onLogin={() => setAuthenticated(true)} />;
-  }
 
   const updateStatus = async (id: string, status: OrderStatus) => {
     try {
@@ -274,6 +282,31 @@ const AdminPage = () => {
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || "Durum güncellenemedi");
+    }
+  };
+
+  const deleteOrder = async (id: string) => {
+    if (adminUser?.role !== "super_admin") {
+      toast.error("Bu işlem için yetkiniz yok");
+      return;
+    }
+
+    const confirmed = window.confirm("Bu siparişi silmek istediğinize emin misiniz?");
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setOrders((prev) => prev.filter((o) => o.id !== id));
+      toast.success("Sipariş silindi");
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "Sipariş silinemedi");
     }
   };
 
@@ -301,6 +334,44 @@ const AdminPage = () => {
     delivered: orders.filter((o) => o.status === "delivered").length,
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="pt-24 pb-20 flex items-center justify-center min-h-[80vh]">
+          <p className="text-muted-foreground">Yükleniyor...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!authorized || !adminUser) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="pt-24 pb-20 flex items-center justify-center min-h-[80vh] px-4">
+          <div className="w-full max-w-md bg-card rounded-2xl p-8 text-center" style={{ boxShadow: "var(--shadow-elevated)" }}>
+            <ShieldAlert className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-foreground mb-2" style={{ fontFamily: "var(--font-heading)" }}>
+              Yetkisiz Erişim
+            </h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Bu sayfayı görüntülemek için yetkili admin hesabıyla giriş yapmanız gerekiyor.
+            </p>
+            <div className="flex gap-2 justify-center">
+              <Button onClick={() => (window.location.href = "/login")}>Giriş Yap</Button>
+              <Button variant="outline" onClick={() => (window.location.href = "/")}>
+                Ana Sayfa
+              </Button>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -312,14 +383,24 @@ const AdminPage = () => {
               <h1 className="text-3xl md:text-4xl font-bold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
                 Sipariş Paneli
               </h1>
+              <p className="text-sm text-muted-foreground mt-2">
+                Giriş yapan yetkili: <span className="font-medium">{adminUser.full_name || adminUser.email}</span> ·{" "}
+                <span className="font-medium">
+                  {adminUser.role === "super_admin" ? "Super Admin" : "Operations Admin"}
+                </span>
+              </p>
             </div>
+
             <div className="flex gap-2 self-start">
-              <Button variant="outline" size="sm" onClick={loadOrders} disabled={loading}>
-                <RefreshCw className="h-4 w-4 mr-2" /> {loading ? "Yükleniyor..." : "Yenile"}
+              <Button variant="outline" size="sm" onClick={loadOrders} disabled={ordersLoading}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                {ordersLoading ? "Yükleniyor..." : "Yenile"}
               </Button>
+
               <Button variant="outline" size="sm" onClick={() => exportToCSV(filtered)}>
                 <Download className="h-4 w-4 mr-2" /> CSV İndir
               </Button>
+
               <Button variant="ghost" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" /> Çıkış
               </Button>
@@ -349,9 +430,10 @@ const AdminPage = () => {
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <Filter className="h-4 w-4" /> Filtrele:
             </div>
+
             <div className="flex flex-wrap gap-3">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger className="w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -389,14 +471,21 @@ const AdminPage = () => {
               </Popover>
 
               {(dateFrom || dateTo) && (
-                <Button variant="ghost" size="sm" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setDateFrom(undefined);
+                    setDateTo(undefined);
+                  }}
+                >
                   Temizle
                 </Button>
               )}
             </div>
           </div>
 
-          {/* Sipariş Listesi */}
+          {/* Sipariş listesi */}
           {filtered.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground">
               <Package className="h-12 w-12 mx-auto mb-4 opacity-40" />
@@ -410,11 +499,9 @@ const AdminPage = () => {
                 const StatusIcon = cfg.icon;
 
                 const itemsSummary = order.items.map((item) => {
-                  const unitPrice = Number(item.unit_price || 0);
                   const lineTotal = Number(item.line_total || 0);
                   return {
                     label: `${item.product_name_snapshot}${item.volume_snapshot ? ` - ${item.volume_snapshot}` : ""}${item.unit_snapshot ? ` ${item.unit_snapshot}` : ""} × ${item.quantity}`,
-                    unitPrice,
                     lineTotal,
                   };
                 });
@@ -459,7 +546,7 @@ const AdminPage = () => {
                         </p>
                       </div>
 
-                      <div className="shrink-0">
+                      <div className="shrink-0 flex flex-col gap-2">
                         <Select value={order.status} onValueChange={(v) => updateStatus(order.id, v as OrderStatus)}>
                           <SelectTrigger className="w-[180px]">
                             <SelectValue />
@@ -472,6 +559,17 @@ const AdminPage = () => {
                             ))}
                           </SelectContent>
                         </Select>
+
+                        {adminUser.role === "super_admin" && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteOrder(order.id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Siparişi Sil
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
