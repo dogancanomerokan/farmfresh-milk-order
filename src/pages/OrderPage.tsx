@@ -16,6 +16,7 @@ import Footer from "@/components/Footer";
 import OrderSummary from "@/components/OrderSummary";
 import { getDeliveryZones, isAddressAllowed, DeliveryZone } from "@/lib/delivery-zones";
 import { getIller, getIlceler } from "@/lib/turkey-data";
+import { getMahalleler, hasMahalleData } from "@/lib/mahalle-data";
 
 const timeSlots = [
   "08:00 - 10:00",
@@ -67,11 +68,15 @@ const OrderPage = () => {
     ? [...new Set(zones.filter((z) => z.il === form.il).map((z) => z.ilce))].sort((a, b) => a.localeCompare(b, "tr"))
     : getIlceler(form.il);
 
-  // Mahalleler (sadece bölge tanımlıysa)
-  const filteredMahalleler = hasZones
+  // Mahalleler: admin bölge tanımından VEYA mahalle-data'dan
+  const adminMahalleler = hasZones
     ? zones.filter((z) => z.il === form.il && z.ilce === form.ilce).flatMap((z) => z.mahalleler)
     : [];
-  const hasMahalleler = filteredMahalleler.length > 0;
+  // Mahalle-data'dan (turkey geneli, admin kısıtı yok)
+  const dataMahalleler = (form.il && form.ilce) ? getMahalleler(form.il, form.ilce) : [];
+  // Admin mahalle tanımladıysa onu kullan, yoksa data'dan al
+  const availableMahalleler = adminMahalleler.length > 0 ? adminMahalleler : dataMahalleler;
+  const showMahalle = availableMahalleler.length > 0;
 
   // Tek seçenek varsa otomatik seç
   useEffect(() => {
@@ -88,11 +93,11 @@ const OrderPage = () => {
   }, [form.il, availableIlceler]);
 
   useEffect(() => {
-    if (!form.ilce || !hasMahalleler) return;
-    if (filteredMahalleler.length === 1 && form.mahalle !== filteredMahalleler[0]) {
-      setForm((prev) => ({ ...prev, mahalle: filteredMahalleler[0] }));
+    if (!form.ilce || !showMahalle) return;
+    if (availableMahalleler.length === 1 && form.mahalle !== availableMahalleler[0]) {
+      setForm((prev) => ({ ...prev, mahalle: availableMahalleler[0] }));
     }
-  }, [form.ilce, filteredMahalleler]);
+  }, [form.ilce, availableMahalleler]);
 
   const updateField = (field: string, value: string) => {
     setForm((prev) => {
@@ -212,13 +217,13 @@ const OrderPage = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  {hasMahalleler && (
+                  {showMahalle && (
                     <div className="space-y-2">
                       <Label>Mahalle *</Label>
                       <Select value={form.mahalle} onValueChange={(v) => updateField("mahalle", v)} disabled={!form.ilce}>
                         <SelectTrigger><SelectValue placeholder="Mahalle seçin" /></SelectTrigger>
                         <SelectContent>
-                          {filteredMahalleler.map((m) => (
+                          {availableMahalleler.map((m) => (
                             <SelectItem key={m} value={m}>{m}</SelectItem>
                           ))}
                         </SelectContent>
