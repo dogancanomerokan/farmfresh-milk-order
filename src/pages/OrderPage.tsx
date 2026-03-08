@@ -191,29 +191,30 @@ const OrderPage = () => {
       const unitPrice = Number(selectedProduct.price || 0);
       const totalAmount = unitPrice * quantityNumber;
 
-      const { data: orderData, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          user_id: user?.id ?? null,
-          guest_name: form.name,
-          guest_email: form.email,
-          guest_phone: form.phone,
-          il: form.il,
-          ilce: form.ilce,
-          mahalle: form.mahalle || null,
-          address: form.address,
-          delivery_date: date.toISOString().split("T")[0],
-          time_slot: form.timeSlot,
-          notes: form.notes || null,
-          status: "pending",
-          total_amount: totalAmount,
-        })
-        .select()
-        .single();
+     const orderId = crypto.randomUUID();
 
-      if (orderError) {
-        throw orderError;
-      }
+const { error: orderError } = await supabase
+  .from("orders")
+  .insert({
+    id: orderId,
+    user_id: user?.id ?? null,
+    guest_name: form.name,
+    guest_email: form.email,
+    guest_phone: form.phone,
+    il: form.il,
+    ilce: form.ilce,
+    mahalle: form.mahalle || null,
+    address: form.address,
+    delivery_date: date.toISOString().split("T")[0],
+    time_slot: form.timeSlot,
+    notes: form.notes || null,
+    status: "pending",
+    total_amount: totalAmount,
+  });
+
+if (orderError) {
+  throw orderError;
+}
 
       const { error: itemError } = await supabase.from("order_items").insert({
         order_id: orderData.id,
