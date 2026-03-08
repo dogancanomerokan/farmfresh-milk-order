@@ -106,21 +106,15 @@ const OrderPage = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.phone || !form.address || !form.product || !form.timeSlot || !date) {
+    if (!form.name || !form.email || !form.phone || !form.il || !form.ilce || !form.address || !form.product || !form.timeSlot || !date) {
       toast.error("Lütfen tüm zorunlu alanları doldurun");
       return;
     }
     // Bölge kontrolü
-    if (hasZones) {
-      if (!form.il || !form.ilce) {
-        toast.error("Lütfen il ve ilçe seçin");
-        return;
-      }
-      if (!isAddressAllowed(form.il, form.ilce, form.mahalle)) {
-        setAddressWarning("Seçtiğiniz bölgeye teslimat yapılmamaktadır.");
-        toast.error("Bu bölgeye teslimat yapılmamaktadır");
-        return;
-      }
+    if (hasZones && !isAddressAllowed(form.il, form.ilce, form.mahalle)) {
+      setAddressWarning("Seçtiğiniz bölgeye teslimat yapılmamaktadır.");
+      toast.error("Bu bölgeye teslimat yapılmamaktadır");
+      return;
     }
     const orders = JSON.parse(localStorage.getItem("milk-orders") || "[]");
     orders.push({
