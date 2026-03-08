@@ -3,8 +3,9 @@ import { ShoppingCart } from "lucide-react";
 type Product = {
   id: string;
   name: string;
-  price: number;
+  Volume: string;
   unit: string;
+  price: number;
   active: boolean;
 };
 
@@ -32,7 +33,7 @@ const OrderSummary = ({ product, quantity }: OrderSummaryProps) => {
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Ürün</span>
             <span className="font-medium text-foreground">
-              {product.name} - {product.unit}
+              {product.name} - {product.Volume} {product.unit}
             </span>
           </div>
           <div className="flex justify-between text-sm">
