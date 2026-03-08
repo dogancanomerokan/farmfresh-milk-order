@@ -66,10 +66,31 @@ const OrderPage = () => {
     : [];
   const hasMahalleler = filteredMahalleler.length > 0;
 
+  // Tek seçenek varsa otomatik seç
+  useEffect(() => {
+    if (!hasZones) return;
+    if (uniqueIller.length === 1 && form.il !== uniqueIller[0]) {
+      setForm((prev) => ({ ...prev, il: uniqueIller[0], ilce: "", mahalle: "" }));
+    }
+  }, [hasZones, uniqueIller]);
+
+  useEffect(() => {
+    if (!hasZones || !form.il) return;
+    if (filteredIlceler.length === 1 && form.ilce !== filteredIlceler[0]) {
+      setForm((prev) => ({ ...prev, ilce: filteredIlceler[0], mahalle: "" }));
+    }
+  }, [hasZones, form.il, filteredIlceler]);
+
+  useEffect(() => {
+    if (!hasZones || !form.ilce) return;
+    if (filteredMahalleler.length === 1 && form.mahalle !== filteredMahalleler[0]) {
+      setForm((prev) => ({ ...prev, mahalle: filteredMahalleler[0] }));
+    }
+  }, [hasZones, form.ilce, filteredMahalleler]);
+
   const updateField = (field: string, value: string) => {
     setForm((prev) => {
       const next = { ...prev, [field]: value };
-      // İl değişince ilçe/mahalle sıfırla
       if (field === "il") { next.ilce = ""; next.mahalle = ""; }
       if (field === "ilce") { next.mahalle = ""; }
       return next;
