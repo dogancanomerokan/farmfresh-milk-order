@@ -19,6 +19,14 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const { user, isLoading } = useAuth();
+
+useEffect(() => {
+  if (!isLoading && user) {
+    navigate("/member");
+  }
+}, [user, isLoading, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
