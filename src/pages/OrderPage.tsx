@@ -209,19 +209,20 @@ const OrderPage = () => {
       }
 
       const { error: itemError } = await supabase.from("order_items").insert({
-        order_id: orderData.id,
-        product_id: selectedProduct.id,
-        product_name_snapshot: selectedProduct.name,
-        volume_snapshot: selectedProduct.Volume,
-        unit_snapshot: selectedProduct.unit,
-        unit_price: unitPrice,
-        quantity: quantityNumber,
-        line_total: totalAmount,
-      });
+  order_id: orderData.id,
+  product_id: selectedProduct.id,
+  product_name_snapshot: selectedProduct.name,
+  volume_snapshot: selectedProduct.Volume,
+  unit_snapshot: selectedProduct.unit,
+  unit_price: unitPrice,
+  quantity: quantityNumber,
+  line_total: totalAmount,
+});
 
-      if (itemError) {
-        throw itemError;
-      }
+if (itemError) {
+  await supabase.from("orders").delete().eq("id", orderData.id);
+  throw itemError;
+}
 
       setSubmitted(true);
       toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
