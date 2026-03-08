@@ -217,19 +217,17 @@ const OrderPage = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  {showMahalle && (
-                    <div className="space-y-2">
-                      <Label>Mahalle *</Label>
-                      <Select value={form.mahalle} onValueChange={(v) => updateField("mahalle", v)} disabled={!form.ilce}>
-                        <SelectTrigger><SelectValue placeholder="Mahalle seçin" /></SelectTrigger>
-                        <SelectContent>
-                          {availableMahalleler.map((m) => (
-                            <SelectItem key={m} value={m}>{m}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
+                  <div className="space-y-2">
+                    <Label>Mahalle *</Label>
+                    <Select value={form.mahalle} onValueChange={(v) => updateField("mahalle", v)} disabled={!form.ilce || availableMahalleler.length === 0}>
+                      <SelectTrigger><SelectValue placeholder={!form.ilce ? "Önce ilçe seçin" : availableMahalleler.length === 0 ? "Mahalle verisi yok" : "Mahalle seçin"} /></SelectTrigger>
+                      <SelectContent>
+                        {availableMahalleler.map((m) => (
+                          <SelectItem key={m} value={m}>{m}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 {addressWarning && (
                   <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-lg p-3">
