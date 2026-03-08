@@ -163,6 +163,10 @@ const OrderPage = () => {
     toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
   };
 
+  const selectedProduct = products.find((p) => p.id === form.product);
+  const quantityNumber = Number(form.quantity || 0);
+  const totalPrice = selectedProduct ? selectedProduct.price * quantityNumber : 0;
+  
   if (submitted) {
     return (
       <div className="min-h-screen bg-background">
@@ -362,7 +366,11 @@ const OrderPage = () => {
 
             {/* Sipariş Özeti */}
             <div className="lg:col-span-1">
-              <OrderSummary product={form.product} quantity={form.quantity} />
+              <OrderSummary
+  product={selectedProduct}
+  quantity={form.quantity}
+  totalPrice={totalPrice}
+/>
             </div>
           </div>
         </div>
