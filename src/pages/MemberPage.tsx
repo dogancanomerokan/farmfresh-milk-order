@@ -172,7 +172,7 @@ const MemberPage = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       loadMemberData();
-    }, 10000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [navigate]);
