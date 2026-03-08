@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -8,9 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LogIn, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabaseClient";
 
 const LoginPage = () => {
-  const { login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,12 +21,28 @@ const LoginPage = () => {
     e.preventDefault();
     setError("");
     setLoading(true);
+
     try {
-      await login(email, password);
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        if (
+          error.message.toLowerCase().includes("email not confirmed") ||
+          error.message.toLowerCase().includes("email not confirmed")
+        ) {
+          throw new Error("Lütfen önce e-posta adresinizi doğrulayın.");
+        }
+
+        throw error;
+      }
+
       toast.success("Giriş başarılı!");
       navigate("/member");
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "Giriş sırasında bir hata oluştu");
     } finally {
       setLoading(false);
     }
@@ -37,15 +52,23 @@ const LoginPage = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-24 pb-20 flex items-center justify-center min-h-[80vh] px-4">
-        <div className="w-full max-w-md bg-card rounded-2xl p-8" style={{ boxShadow: "var(--shadow-elevated)" }}>
+        <div
+          className="w-full max-w-md bg-card rounded-2xl p-8"
+          style={{ boxShadow: "var(--shadow-elevated)" }}
+        >
           <div className="text-center mb-8">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
               <LogIn className="h-7 w-7 text-primary" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
+            <h1
+              className="text-2xl font-bold text-foreground"
+              style={{ fontFamily: "var(--font-heading)" }}
+            >
               Giriş Yap
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">Hesabınıza giriş yapın</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Hesabınıza giriş yapın
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -77,13 +100,19 @@ const LoginPage = () => {
                   onClick={() => setShowPw(!showPw)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPw ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
 
             {error && (
-              <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</p>
+              <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">
+                {error}
+              </p>
             )}
 
             <Button type="submit" className="w-full" disabled={loading}>
@@ -93,7 +122,10 @@ const LoginPage = () => {
 
           <p className="text-center text-sm text-muted-foreground mt-6">
             Hesabınız yok mu?{" "}
-            <Link to="/register" className="text-primary font-semibold hover:underline">
+            <Link
+              to="/register"
+              className="text-primary font-semibold hover:underline"
+            >
               Kayıt Ol
             </Link>
           </p>
