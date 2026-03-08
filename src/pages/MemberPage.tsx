@@ -150,10 +150,12 @@ const MemberPage = () => {
           itemsData = fetchedItems || [];
         }
 
-        const mergedOrders: MemberOrder[] = (ordersData || []).map((order) => ({
-          ...order,
-          items: itemsData.filter((item) => item.order_id === order.id),
-        }));
+       const mergedOrders: MemberOrder[] = (ordersData || [])
+  .map((order) => ({
+    ...order,
+    items: itemsData.filter((item) => item.order_id === order.id),
+  }))
+  .filter((order) => order.items.length > 0);
 
         setOrders(mergedOrders);
       } catch (error: any) {
