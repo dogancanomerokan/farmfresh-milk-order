@@ -1,7 +1,19 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { tr } from "date-fns/locale";
-import { CalendarIcon, Package, Clock, CheckCircle2, Truck, XCircle, Filter, RefreshCw, Download, Lock, LogOut } from "lucide-react";
+import {
+  CalendarIcon,
+  Package,
+  Clock,
+  CheckCircle2,
+  Truck,
+  XCircle,
+  Filter,
+  RefreshCw,
+  Download,
+  Lock,
+  LogOut,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,41 +26,51 @@ import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import DeliveryZoneManager from "@/components/DeliveryZoneManager";
+import { supabase } from "@/lib/supabaseClient";
 
-// ⚠️ Basit şifre koruması — production'da backend auth kullanılmalı
+// ⚠️ Geçici admin koruması — sonra gerçek admin auth yapacağız
 const ADMIN_PASSWORD = "sadesut2024";
 
-type OrderStatus = "pending" | "preparing" | "delivering" | "delivered" | "cancelled";
+type OrderStatus = "pending" | "approved" | "preparing" | "delivering" | "delivered" | "cancelled";
 
-interface Order {
+type OrderRow = {
   id: string;
-  name: string;
-  email: string;
-  phone: string;
+  user_id: string | null;
+  guest_name: string | null;
+  guest_email: string | null;
+  guest_phone: string | null;
+  il: string;
+  ilce: string;
+  mahalle: string | null;
   address: string;
-  product: string;
-  quantity: string;
-  timeSlot: string;
-  notes: string;
-  date: string;
-  createdAt: string;
-  status?: OrderStatus;
-}
-
-const productNames: Record<string, string> = {
-  "glass-1l": "1L Cam Şişe",
-  "pet-3l": "3L PET Şişe",
-  "pet-5l": "5L PET Şişe",
+  delivery_date: string;
+  time_slot: string;
+  notes: string | null;
+  status: OrderStatus;
+  total_amount: number;
+  created_at: string;
 };
 
-const productPrices: Record<string, number> = {
-  "glass-1l": 100,
-  "pet-3l": 130,
-  "pet-5l": 200,
+type OrderItemRow = {
+  id: string;
+  order_id: string;
+  product_id: string | null;
+  product_name_snapshot: string;
+  volume_snapshot: string | null;
+  unit_snapshot: string | null;
+  unit_price: number | null;
+  quantity: number;
+  line_total: number | null;
+  created_at: string;
+};
+
+type AdminOrder = OrderRow & {
+  items: OrderItemRow[];
 };
 
 const statusConfig: Record<OrderStatus, { label: string; icon: React.ElementType; color: string }> = {
   pending: { label: "Beklemede", icon: Clock, color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+  approved: { label: "Onaylandı", icon: CheckCircle2, color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
   preparing: { label: "Hazırlanıyor", icon: Package, color: "bg-blue-100 text-blue-800 border-blue-200" },
   delivering: { label: "Yolda", icon: Truck, color: "bg-purple-100 text-purple-800 border-purple-200" },
   delivered: { label: "Teslim Edildi", icon: CheckCircle2, color: "bg-green-100 text-green-800 border-green-200" },
@@ -56,26 +78,49 @@ const statusConfig: Record<OrderStatus, { label: string; icon: React.ElementType
 };
 
 /* ─── CSV Export ─── */
-const exportToCSV = (orders: Order[]) => {
-  const headers = ["ID", "Ad Soyad", "E-posta", "Telefon", "Adres", "Ürün", "Adet", "Birim Fiyat", "Toplam", "Teslimat Tarihi", "Teslimat Saati", "Durum", "Notlar", "Oluşturulma"];
+const exportToCSV = (orders: AdminOrder[]) => {
+  const headers = [
+    "Sipariş ID",
+    "Ad Soyad",
+    "E-posta",
+    "Telefon",
+    "İl",
+    "İlçe",
+    "Mahalle",
+    "Adres",
+    "Ürünler",
+    "Toplam",
+    "Teslimat Tarihi",
+    "Teslimat Saati",
+    "Durum",
+    "Notlar",
+    "Oluşturulma",
+  ];
+
   const rows = orders.map((o) => {
-    const unitPrice = productPrices[o.product] || 0;
-    const total = unitPrice * parseInt(o.quantity);
+    const productsText = o.items
+      .map((item) => {
+        const total = Number(item.line_total || 0);
+        return `${item.product_name_snapshot} ${item.volume_snapshot || ""} ${item.unit_snapshot || ""} x${item.quantity} (${total} TL)`.trim();
+      })
+      .join(" | ");
+
     return [
       o.id,
-      o.name,
-      o.email,
-      o.phone,
-      `"${o.address.replace(/"/g, '""')}"`,
-      productNames[o.product] || o.product,
-      o.quantity,
-      `${unitPrice} ₺`,
-      `${total} ₺`,
-      format(parseISO(o.date), "d MMMM yyyy", { locale: tr }),
-      o.timeSlot,
-      statusConfig[o.status as OrderStatus]?.label || o.status,
+      o.guest_name || "",
+      o.guest_email || "",
+      o.guest_phone || "",
+      o.il || "",
+      o.ilce || "",
+      o.mahalle || "",
+      `"${(o.address || "").replace(/"/g, '""')}"`,
+      `"${productsText.replace(/"/g, '""')}"`,
+      `${o.total_amount || 0} TL`,
+      format(parseISO(o.delivery_date), "d MMMM yyyy", { locale: tr }),
+      o.time_slot,
+      statusConfig[o.status]?.label || o.status,
       `"${(o.notes || "").replace(/"/g, '""')}"`,
-      format(parseISO(o.createdAt), "d MMM yyyy HH:mm", { locale: tr }),
+      format(parseISO(o.created_at), "d MMM yyyy HH:mm", { locale: tr }),
     ].join(",");
   });
 
@@ -111,10 +156,10 @@ const AdminLogin = ({ onLogin }: { onLogin: () => void }) => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-24 pb-20 flex items-center justify-center min-h-[80vh]">
-        <div className="w-full max-w-sm bg-card rounded-2xl p-8" style={{ boxShadow: 'var(--shadow-elevated)' }}>
+        <div className="w-full max-w-sm bg-card rounded-2xl p-8" style={{ boxShadow: "var(--shadow-elevated)" }}>
           <div className="text-center mb-6">
             <Lock className="h-10 w-10 text-primary mx-auto mb-3" />
-            <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: 'var(--font-heading)' }}>
+            <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
               Yönetici Girişi
             </h2>
             <p className="text-sm text-muted-foreground mt-1">Panele erişmek için şifrenizi girin</p>
@@ -127,13 +172,18 @@ const AdminLogin = ({ onLogin }: { onLogin: () => void }) => {
                 type="password"
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => { setPassword(e.target.value); setError(false); }}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError(false);
+                }}
                 className={error ? "border-destructive" : ""}
                 autoFocus
               />
               {error && <p className="text-xs text-destructive">Şifre hatalı, tekrar deneyin.</p>}
             </div>
-            <Button type="submit" className="w-full">Giriş Yap</Button>
+            <Button type="submit" className="w-full">
+              Giriş Yap
+            </Button>
           </form>
         </div>
       </div>
@@ -145,17 +195,57 @@ const AdminLogin = ({ onLogin }: { onLogin: () => void }) => {
 /* ─── Admin Dashboard ─── */
 const AdminPage = () => {
   const [authenticated, setAuthenticated] = useState(() => sessionStorage.getItem("admin-auth") === "true");
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<Date>();
   const [dateTo, setDateTo] = useState<Date>();
 
-  const loadOrders = () => {
-    const raw = JSON.parse(localStorage.getItem("milk-orders") || "[]") as Order[];
-    setOrders(raw.map((o) => ({ ...o, status: o.status || "pending" })));
+  const loadOrders = async () => {
+    setLoading(true);
+
+    try {
+      const { data: ordersData, error: ordersError } = await supabase
+        .from("orders")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (ordersError) throw ordersError;
+
+      const orderIds = (ordersData || []).map((o) => o.id);
+
+      let itemsData: OrderItemRow[] = [];
+      if (orderIds.length > 0) {
+        const { data: fetchedItems, error: itemsError } = await supabase
+          .from("order_items")
+          .select("*")
+          .in("order_id", orderIds)
+          .order("created_at", { ascending: true });
+
+        if (itemsError) throw itemsError;
+
+        itemsData = fetchedItems || [];
+      }
+
+      const mergedOrders: AdminOrder[] = (ordersData || []).map((order) => ({
+        ...order,
+        items: itemsData.filter((item) => item.order_id === order.id),
+      }));
+
+      setOrders(mergedOrders);
+    } catch (error: any) {
+      console.error("Siparişler yüklenemedi:", error);
+      toast.error(error.message || "Siparişler yüklenemedi");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { if (authenticated) loadOrders(); }, [authenticated]);
+  useEffect(() => {
+    if (authenticated) {
+      loadOrders();
+    }
+  }, [authenticated]);
 
   const handleLogout = () => {
     sessionStorage.removeItem("admin-auth");
@@ -167,24 +257,42 @@ const AdminPage = () => {
     return <AdminLogin onLogin={() => setAuthenticated(true)} />;
   }
 
-  const updateStatus = (id: string, status: OrderStatus) => {
-    const updated = orders.map((o) => (o.id === id ? { ...o, status } : o));
-    setOrders(updated);
-    localStorage.setItem("milk-orders", JSON.stringify(updated));
-    toast.success(`Sipariş durumu "${statusConfig[status].label}" olarak güncellendi`);
+  const updateStatus = async (id: string, status: OrderStatus) => {
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ status })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setOrders((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, status } : o))
+      );
+
+      toast.success(`Sipariş durumu "${statusConfig[status].label}" olarak güncellendi`);
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "Durum güncellenemedi");
+    }
   };
 
   const filtered = orders
     .filter((o) => statusFilter === "all" || o.status === statusFilter)
     .filter((o) => {
       if (!dateFrom && !dateTo) return true;
-      const orderDate = parseISO(o.date);
-      if (dateFrom && dateTo) return isWithinInterval(orderDate, { start: startOfDay(dateFrom), end: endOfDay(dateTo) });
+      const orderDate = parseISO(o.delivery_date);
+      if (dateFrom && dateTo) {
+        return isWithinInterval(orderDate, {
+          start: startOfDay(dateFrom),
+          end: endOfDay(dateTo),
+        });
+      }
       if (dateFrom) return orderDate >= startOfDay(dateFrom);
       if (dateTo) return orderDate <= endOfDay(dateTo);
       return true;
     })
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const stats = {
     total: orders.length,
@@ -201,13 +309,13 @@ const AdminPage = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
             <div>
               <p className="text-sm uppercase tracking-widest text-accent font-semibold mb-1">Yönetim</p>
-              <h1 className="text-3xl md:text-4xl font-bold text-foreground" style={{ fontFamily: 'var(--font-heading)' }}>
+              <h1 className="text-3xl md:text-4xl font-bold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
                 Sipariş Paneli
               </h1>
             </div>
             <div className="flex gap-2 self-start">
-              <Button variant="outline" size="sm" onClick={loadOrders}>
-                <RefreshCw className="h-4 w-4 mr-2" /> Yenile
+              <Button variant="outline" size="sm" onClick={loadOrders} disabled={loading}>
+                <RefreshCw className="h-4 w-4 mr-2" /> {loading ? "Yükleniyor..." : "Yenile"}
               </Button>
               <Button variant="outline" size="sm" onClick={() => exportToCSV(filtered)}>
                 <Download className="h-4 w-4 mr-2" /> CSV İndir
@@ -226,7 +334,7 @@ const AdminPage = () => {
               { label: "Hazırlanan / Yolda", value: stats.delivering, color: "text-blue-600" },
               { label: "Teslim Edildi", value: stats.delivered, color: "text-green-600" },
             ].map((s) => (
-              <div key={s.label} className="bg-card rounded-xl p-4 text-center" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div key={s.label} className="bg-card rounded-xl p-4 text-center" style={{ boxShadow: "var(--shadow-card)" }}>
                 <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
                 <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
               </div>
@@ -234,17 +342,24 @@ const AdminPage = () => {
           </div>
 
           {/* Filtreler */}
-          <div className="bg-card rounded-xl p-4 mb-6 flex flex-col sm:flex-row gap-3 items-start sm:items-end" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div
+            className="bg-card rounded-xl p-4 mb-6 flex flex-col sm:flex-row gap-3 items-start sm:items-end"
+            style={{ boxShadow: "var(--shadow-card)" }}
+          >
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <Filter className="h-4 w-4" /> Filtrele:
             </div>
             <div className="flex flex-wrap gap-3">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tüm Durumlar</SelectItem>
                   {Object.entries(statusConfig).map(([key, cfg]) => (
-                    <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
+                    <SelectItem key={key} value={key}>
+                      {cfg.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -291,37 +406,64 @@ const AdminPage = () => {
           ) : (
             <div className="space-y-4">
               {filtered.map((order) => {
-                const cfg = statusConfig[order.status as OrderStatus];
+                const cfg = statusConfig[order.status];
                 const StatusIcon = cfg.icon;
-                const unitPrice = productPrices[order.product] || 0;
-                const total = unitPrice * parseInt(order.quantity);
+
+                const itemsSummary = order.items.map((item) => {
+                  const unitPrice = Number(item.unit_price || 0);
+                  const lineTotal = Number(item.line_total || 0);
+                  return {
+                    label: `${item.product_name_snapshot}${item.volume_snapshot ? ` - ${item.volume_snapshot}` : ""}${item.unit_snapshot ? ` ${item.unit_snapshot}` : ""} × ${item.quantity}`,
+                    unitPrice,
+                    lineTotal,
+                  };
+                });
 
                 return (
-                  <div key={order.id} className="bg-card rounded-xl p-5 md:p-6" style={{ boxShadow: 'var(--shadow-card)' }}>
+                  <div key={order.id} className="bg-card rounded-xl p-5 md:p-6" style={{ boxShadow: "var(--shadow-card)" }}>
                     <div className="flex flex-col md:flex-row md:items-start gap-4">
                       <div className="flex-1 space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-semibold text-foreground">{order.name}</h3>
+                          <h3 className="font-semibold text-foreground">{order.guest_name || "Misafir Siparişi"}</h3>
                           <Badge variant="outline" className={cn("text-xs border", cfg.color)}>
                             <StatusIcon className="h-3 w-3 mr-1" />
                             {cfg.label}
                           </Badge>
                         </div>
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm text-muted-foreground">
-                          <p>📦 {productNames[order.product] || order.product} × {order.quantity} = <span className="font-semibold text-primary">{total} ₺</span></p>
-                          <p>📅 {format(parseISO(order.date), "d MMMM yyyy", { locale: tr })} · {order.timeSlot}</p>
-                          <p>📞 {order.phone}</p>
-                          <p>✉️ {order.email}</p>
-                          <p className="sm:col-span-2">📍 {order.address}</p>
+                          <div className="sm:col-span-2">
+                            {itemsSummary.map((item, index) => (
+                              <p key={index}>
+                                📦 {item.label} = <span className="font-semibold text-primary">{item.lineTotal} ₺</span>
+                              </p>
+                            ))}
+                          </div>
+
+                          <p>📅 {format(parseISO(order.delivery_date), "d MMMM yyyy", { locale: tr })} · {order.time_slot}</p>
+                          <p>📞 {order.guest_phone || "—"}</p>
+                          <p>✉️ {order.guest_email || "—"}</p>
+                          <p className="sm:col-span-2">
+                            📍 {order.il} / {order.ilce}
+                            {order.mahalle ? ` / ${order.mahalle}` : ""} — {order.address}
+                          </p>
                           {order.notes && <p className="sm:col-span-2 italic">💬 {order.notes}</p>}
                         </div>
+
+                        <p className="text-sm font-semibold text-foreground">
+                          Toplam: {Number(order.total_amount || 0)} TL
+                        </p>
+
                         <p className="text-xs text-muted-foreground">
-                          Oluşturulma: {format(parseISO(order.createdAt), "d MMM yyyy HH:mm", { locale: tr })}
+                          Oluşturulma: {format(parseISO(order.created_at), "d MMM yyyy HH:mm", { locale: tr })}
                         </p>
                       </div>
+
                       <div className="shrink-0">
                         <Select value={order.status} onValueChange={(v) => updateStatus(order.id, v as OrderStatus)}>
-                          <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue />
+                          </SelectTrigger>
                           <SelectContent>
                             {Object.entries(statusConfig).map(([key, c]) => (
                               <SelectItem key={key} value={key}>
