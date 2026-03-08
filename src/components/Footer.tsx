@@ -1,4 +1,4 @@
-import logo from "@/assets/logo.png";
+import { Milk } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -6,7 +6,7 @@ const Footer = () => {
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
-            <img src={logo} alt="Sade Süt" className="h-6 w-6" />
+            <Milk className="h-6 w-6" />
             <span className="text-lg font-bold" style={{ fontFamily: 'var(--font-heading)' }}>Sade Süt</span>
           </div>
           <p className="text-primary-foreground/70 text-sm text-center">
