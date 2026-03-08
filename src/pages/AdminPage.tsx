@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import DeliveryZoneManager from "@/components/DeliveryZoneManager";
 
 // ⚠️ Basit şifre koruması — production'da backend auth kullanılmalı
 const ADMIN_PASSWORD = "sadesut2024";
@@ -336,6 +337,11 @@ const AdminPage = () => {
               })}
             </div>
           )}
+
+          {/* Teslimat Bölgesi Yönetimi */}
+          <div className="mt-10">
+            <DeliveryZoneManager />
+          </div>
         </div>
       </div>
       <Footer />
