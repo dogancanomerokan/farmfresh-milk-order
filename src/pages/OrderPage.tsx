@@ -17,6 +17,7 @@ import OrderSummary from "@/components/OrderSummary";
 import { getDeliveryZones, isAddressAllowed, DeliveryZone } from "@/lib/delivery-zones";
 import { getIller, getIlceler } from "@/lib/turkey-data";
 import { getMahalleler, hasMahalleData } from "@/lib/mahalle-data";
+import { supabase } from "@/lib/supabaseClient";
 
 const timeSlots = [
   "08:00 - 10:00",
@@ -27,18 +28,23 @@ const timeSlots = [
   "18:00 - 20:00",
 ];
 
-const products = [
-  { id: "glass-1l", name: "1 Litre Cam Şişe — 100 ₺", size: "1L" },
-  { id: "pet-3l", name: "3 Litre PET Şişe — 130 ₺", size: "3L" },
-  { id: "pet-5l", name: "5 Litre PET Şişe — 200 ₺", size: "5L" },
-];
+type Product = {
+  id: string;
+  name: string;
+  price: number;
+  unit: string;
+  active: boolean;
+};
 
 const OrderPage = () => {
   const [submitted, setSubmitted] = useState(false);
   const [date, setDate] = useState<Date>();
   const [zones, setZones] = useState<DeliveryZone[]>([]);
   const [addressWarning, setAddressWarning] = useState("");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
   const [form, setForm] = useState({
+    
     name: "",
     email: "",
     phone: "",
@@ -55,6 +61,30 @@ const OrderPage = () => {
   useEffect(() => {
     setZones(getDeliveryZones());
   }, []);
+
+  useEffect(() => {
+  const loadProducts = async () => {
+    setLoadingProducts(true);
+
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .eq("active", true)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Ürünler alınamadı:", error.message);
+      toast.error("Ürünler yüklenemedi");
+      setProducts([]);
+    } else {
+      setProducts(data || []);
+    }
+
+    setLoadingProducts(false);
+  };
+
+  loadProducts();
+}, []);
 
   const hasZones = zones.length > 0;
 
@@ -251,11 +281,23 @@ const OrderPage = () => {
                     <Label>Ürün *</Label>
                     <Select value={form.product} onValueChange={(v) => updateField("product", v)}>
                       <SelectTrigger><SelectValue placeholder="Ürün seçin" /></SelectTrigger>
-                      <SelectContent>
-                        {products.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                        ))}
-                      </SelectContent>
+<SelectContent>
+  {loadingProducts ? (
+    <SelectItem value="loading" disabled>
+      Ürünler yükleniyor...
+    </SelectItem>
+  ) : products.length === 0 ? (
+    <SelectItem value="empty" disabled>
+      Ürün bulunamadı
+    </SelectItem>
+  ) : (
+    products.map((p) => (
+      <SelectItem key={p.id} value={p.id}>
+        {p.name} — {p.price} ₺ / {p.unit}
+      </SelectItem>
+    ))
+  )}
+</SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
