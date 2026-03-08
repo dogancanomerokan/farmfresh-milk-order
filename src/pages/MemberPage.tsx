@@ -75,96 +75,95 @@ const MemberPage = () => {
     address: "",
   });
 
-  useEffect(() => {
-    const loadMemberData = async () => {
-      setLoading(true);
+  const loadMemberData = async () => {
+  setLoading(true);
 
-      try {
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+  try {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-        if (userError || !user) {
-          navigate("/login");
-          return;
-        }
+    if (userError || !user) {
+      navigate("/login");
+      return;
+    }
 
-        if (!user.email_confirmed_at) {
-          toast.error("Lütfen önce e-posta adresinizi doğrulayın.");
-          await supabase.auth.signOut();
-          navigate("/login");
-          return;
-        }
+    if (!user.email_confirmed_at) {
+      toast.error("Lütfen önce e-posta adresinizi doğrulayın.");
+      await supabase.auth.signOut();
+      navigate("/login");
+      return;
+    }
 
-        setAuthUser({
-          id: user.id,
-          email: user.email || "",
-        });
+    setAuthUser({
+      id: user.id,
+      email: user.email || "",
+    });
 
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .maybeSingle();
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
 
-        if (profileError) {
-          console.error("Profil alınamadı:", profileError.message);
-        }
+    if (profileError) {
+      console.error("Profil alınamadı:", profileError.message);
+    }
 
-        if (profileData) {
-          setProfile(profileData);
-        } else {
-          setProfile({
-            id: user.id,
-            full_name: user.user_metadata?.full_name || "",
-            phone: user.user_metadata?.phone || "",
-            address: "",
-          });
-        }
+    if (profileData) {
+      setProfile(profileData);
+    } else {
+      setProfile({
+        id: user.id,
+        full_name: user.user_metadata?.full_name || "",
+        phone: user.user_metadata?.phone || "",
+        address: "",
+      });
+    }
 
-        const { data: ordersData, error: ordersError } = await supabase
-          .from("orders")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
+    const { data: ordersData, error: ordersError } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
 
-        if (ordersError) {
-          throw ordersError;
-        }
+    if (ordersError) {
+      throw ordersError;
+    }
 
-        const orderIds = (ordersData || []).map((o) => o.id);
+    const orderIds = (ordersData || []).map((o) => o.id);
 
-        let itemsData: OrderItemRow[] = [];
-        if (orderIds.length > 0) {
-          const { data: fetchedItems, error: itemsError } = await supabase
-            .from("order_items")
-            .select("*")
-            .in("order_id", orderIds)
-            .order("created_at", { ascending: true });
+    let itemsData: OrderItemRow[] = [];
+    if (orderIds.length > 0) {
+      const { data: fetchedItems, error: itemsError } = await supabase
+        .from("order_items")
+        .select("*")
+        .in("order_id", orderIds)
+        .order("created_at", { ascending: true });
 
-          if (itemsError) {
-            throw itemsError;
-          }
-
-          itemsData = fetchedItems || [];
-        }
-
-       const mergedOrders: MemberOrder[] = (ordersData || [])
-  .map((order) => ({
-    ...order,
-    items: itemsData.filter((item) => item.order_id === order.id),
-  }))
-  .filter((order) => order.items.length > 0);
-
-        setOrders(mergedOrders);
-      } catch (error: any) {
-        console.error("Member page load error:", error);
-        toast.error(error.message || "Üye bilgileri yüklenemedi");
-      } finally {
-        setLoading(false);
+      if (itemsError) {
+        throw itemsError;
       }
-    };
+
+      itemsData = fetchedItems || [];
+    }
+
+    const mergedOrders: MemberOrder[] = (ordersData || [])
+      .map((order) => ({
+        ...order,
+        items: itemsData.filter((item) => item.order_id === order.id),
+      }))
+      .filter((order) => order.items.length > 0);
+
+    setOrders(mergedOrders);
+  } catch (error: any) {
+    console.error("Member page load error:", error);
+    toast.error(error.message || "Üye bilgileri yüklenemedi");
+  } finally {
+    setLoading(false);
+  }
+};
 
     loadMemberData();
   }, [navigate]);
