@@ -28,7 +28,7 @@ const Navbar = () => {
           </Link>
           {user ? (
             <Link to="/member" className="text-sm font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1">
-              <User className="h-4 w-4" /> {user.name.split(" ")[0]}
+              <User className="h-4 w-4" /> {(user.name || "Üye").split(" ")[0]}
             </Link>
           ) : (
             <Link to="/login" className="text-sm font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1">
@@ -57,7 +57,7 @@ const Navbar = () => {
           </Link>
           {user ? (
             <Link to="/member" onClick={() => setIsOpen(false)} className="block text-sm font-medium text-foreground py-2 flex items-center gap-1">
-              <User className="h-4 w-4" /> {user.name.split(" ")[0]}
+              <User className="h-4 w-4" /> {(user.name || "Üye").split(" ")[0]}
             </Link>
           ) : (
             <Link to="/login" onClick={() => setIsOpen(false)} className="block text-sm font-medium text-foreground py-2 flex items-center gap-1">
