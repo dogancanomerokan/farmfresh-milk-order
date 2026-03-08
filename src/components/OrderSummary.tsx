@@ -1,25 +1,21 @@
 import { ShoppingCart } from "lucide-react";
 
-const priceMap: Record<string, number> = {
-  "glass-1l": 100,
-  "pet-3l": 130,
-  "pet-5l": 200,
-};
-
-const nameMap: Record<string, string> = {
-  "glass-1l": "1 Litre Cam Şişe",
-  "pet-3l": "3 Litre PET Şişe",
-  "pet-5l": "5 Litre PET Şişe",
+type Product = {
+  id: string;
+  name: string;
+  price: number;
+  unit: string;
+  active: boolean;
 };
 
 interface OrderSummaryProps {
-  product: string;
+  product?: Product;
   quantity: string;
 }
 
 const OrderSummary = ({ product, quantity }: OrderSummaryProps) => {
-  const unitPrice = priceMap[product] || 0;
-  const qty = parseInt(quantity) || 1;
+  const unitPrice = Number(product?.price || 0);
+  const qty = parseInt(quantity, 10) || 1;
   const total = unitPrice * qty;
 
   return (
@@ -35,7 +31,9 @@ const OrderSummary = ({ product, quantity }: OrderSummaryProps) => {
         <div className="space-y-4">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Ürün</span>
-            <span className="font-medium text-foreground">{nameMap[product]}</span>
+            <span className="font-medium text-foreground">
+              {product.name} - {product.unit}
+            </span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Birim Fiyat</span>
