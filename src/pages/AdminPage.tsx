@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { tr } from "date-fns/locale";
-import { CalendarIcon, Package, Clock, CheckCircle2, Truck, XCircle, Filter, RefreshCw } from "lucide-react";
+import { CalendarIcon, Package, Clock, CheckCircle2, Truck, XCircle, Filter, RefreshCw, Download, Lock, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,6 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+
+// ⚠️ Basit şifre koruması — production'da backend auth kullanılmalı
+const ADMIN_PASSWORD = "sadesut2024";
 
 type OrderStatus = "pending" | "preparing" | "delivering" | "delivered" | "cancelled";
 
@@ -49,7 +54,96 @@ const statusConfig: Record<OrderStatus, { label: string; icon: React.ElementType
   cancelled: { label: "İptal", icon: XCircle, color: "bg-red-100 text-red-800 border-red-200" },
 };
 
+/* ─── CSV Export ─── */
+const exportToCSV = (orders: Order[]) => {
+  const headers = ["ID", "Ad Soyad", "E-posta", "Telefon", "Adres", "Ürün", "Adet", "Birim Fiyat", "Toplam", "Teslimat Tarihi", "Teslimat Saati", "Durum", "Notlar", "Oluşturulma"];
+  const rows = orders.map((o) => {
+    const unitPrice = productPrices[o.product] || 0;
+    const total = unitPrice * parseInt(o.quantity);
+    return [
+      o.id,
+      o.name,
+      o.email,
+      o.phone,
+      `"${o.address.replace(/"/g, '""')}"`,
+      productNames[o.product] || o.product,
+      o.quantity,
+      `${unitPrice} ₺`,
+      `${total} ₺`,
+      format(parseISO(o.date), "d MMMM yyyy", { locale: tr }),
+      o.timeSlot,
+      statusConfig[o.status as OrderStatus]?.label || o.status,
+      `"${(o.notes || "").replace(/"/g, '""')}"`,
+      format(parseISO(o.createdAt), "d MMM yyyy HH:mm", { locale: tr }),
+    ].join(",");
+  });
+
+  const bom = "\uFEFF";
+  const csv = bom + [headers.join(","), ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `siparisler_${format(new Date(), "yyyy-MM-dd")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast.success("CSV dosyası indirildi");
+};
+
+/* ─── Login Screen ─── */
+const AdminLogin = ({ onLogin }: { onLogin: () => void }) => {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === ADMIN_PASSWORD) {
+      sessionStorage.setItem("admin-auth", "true");
+      onLogin();
+    } else {
+      setError(true);
+      toast.error("Yanlış şifre!");
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="pt-24 pb-20 flex items-center justify-center min-h-[80vh]">
+        <div className="w-full max-w-sm bg-card rounded-2xl p-8" style={{ boxShadow: 'var(--shadow-elevated)' }}>
+          <div className="text-center mb-6">
+            <Lock className="h-10 w-10 text-primary mx-auto mb-3" />
+            <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: 'var(--font-heading)' }}>
+              Yönetici Girişi
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">Panele erişmek için şifrenizi girin</p>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="admin-pw">Şifre</Label>
+              <Input
+                id="admin-pw"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); setError(false); }}
+                className={error ? "border-destructive" : ""}
+                autoFocus
+              />
+              {error && <p className="text-xs text-destructive">Şifre hatalı, tekrar deneyin.</p>}
+            </div>
+            <Button type="submit" className="w-full">Giriş Yap</Button>
+          </form>
+        </div>
+      </div>
+      <Footer />
+    </div>
+  );
+};
+
+/* ─── Admin Dashboard ─── */
 const AdminPage = () => {
+  const [authenticated, setAuthenticated] = useState(() => sessionStorage.getItem("admin-auth") === "true");
   const [orders, setOrders] = useState<Order[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<Date>();
@@ -60,7 +154,17 @@ const AdminPage = () => {
     setOrders(raw.map((o) => ({ ...o, status: o.status || "pending" })));
   };
 
-  useEffect(() => { loadOrders(); }, []);
+  useEffect(() => { if (authenticated) loadOrders(); }, [authenticated]);
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("admin-auth");
+    setAuthenticated(false);
+    toast.info("Çıkış yapıldı");
+  };
+
+  if (!authenticated) {
+    return <AdminLogin onLogin={() => setAuthenticated(true)} />;
+  }
 
   const updateStatus = (id: string, status: OrderStatus) => {
     const updated = orders.map((o) => (o.id === id ? { ...o, status } : o));
@@ -69,26 +173,24 @@ const AdminPage = () => {
     toast.success(`Sipariş durumu "${statusConfig[status].label}" olarak güncellendi`);
   };
 
-  const filtered = useMemo(() => {
-    return orders
-      .filter((o) => statusFilter === "all" || o.status === statusFilter)
-      .filter((o) => {
-        if (!dateFrom && !dateTo) return true;
-        const orderDate = parseISO(o.date);
-        if (dateFrom && dateTo) return isWithinInterval(orderDate, { start: startOfDay(dateFrom), end: endOfDay(dateTo) });
-        if (dateFrom) return orderDate >= startOfDay(dateFrom);
-        if (dateTo) return orderDate <= endOfDay(dateTo);
-        return true;
-      })
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [orders, statusFilter, dateFrom, dateTo]);
+  const filtered = orders
+    .filter((o) => statusFilter === "all" || o.status === statusFilter)
+    .filter((o) => {
+      if (!dateFrom && !dateTo) return true;
+      const orderDate = parseISO(o.date);
+      if (dateFrom && dateTo) return isWithinInterval(orderDate, { start: startOfDay(dateFrom), end: endOfDay(dateTo) });
+      if (dateFrom) return orderDate >= startOfDay(dateFrom);
+      if (dateTo) return orderDate <= endOfDay(dateTo);
+      return true;
+    })
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  const stats = useMemo(() => ({
+  const stats = {
     total: orders.length,
     pending: orders.filter((o) => o.status === "pending").length,
     delivering: orders.filter((o) => o.status === "delivering" || o.status === "preparing").length,
     delivered: orders.filter((o) => o.status === "delivered").length,
-  }), [orders]);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -102,9 +204,17 @@ const AdminPage = () => {
                 Sipariş Paneli
               </h1>
             </div>
-            <Button variant="outline" size="sm" onClick={loadOrders} className="self-start">
-              <RefreshCw className="h-4 w-4 mr-2" /> Yenile
-            </Button>
+            <div className="flex gap-2 self-start">
+              <Button variant="outline" size="sm" onClick={loadOrders}>
+                <RefreshCw className="h-4 w-4 mr-2" /> Yenile
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => exportToCSV(filtered)}>
+                <Download className="h-4 w-4 mr-2" /> CSV İndir
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" /> Çıkış
+              </Button>
+            </div>
           </div>
 
           {/* İstatistikler */}
@@ -188,7 +298,6 @@ const AdminPage = () => {
                 return (
                   <div key={order.id} className="bg-card rounded-xl p-5 md:p-6" style={{ boxShadow: 'var(--shadow-card)' }}>
                     <div className="flex flex-col md:flex-row md:items-start gap-4">
-                      {/* Sol: Bilgiler */}
                       <div className="flex-1 space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="font-semibold text-foreground">{order.name}</h3>
@@ -209,8 +318,6 @@ const AdminPage = () => {
                           Oluşturulma: {format(parseISO(order.createdAt), "d MMM yyyy HH:mm", { locale: tr })}
                         </p>
                       </div>
-
-                      {/* Sağ: Durum Değiştir */}
                       <div className="shrink-0">
                         <Select value={order.status} onValueChange={(v) => updateStatus(order.id, v as OrderStatus)}>
                           <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
