@@ -7,10 +7,10 @@ const Footer = () => {
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
             <Milk className="h-6 w-6" />
-            <span className="text-lg font-bold" style={{ fontFamily: 'var(--font-heading)' }}>FreshFarm Milk</span>
+            <span className="text-lg font-bold" style={{ fontFamily: 'var(--font-heading)' }}>Sade Süt</span>
           </div>
           <p className="text-primary-foreground/70 text-sm text-center">
-            © {new Date().getFullYear()} FreshFarm Milk. Farm fresh, delivered daily.
+            © {new Date().getFullYear()} Sade Süt. Çiftlikten taze, her gün kapınızda.
           </p>
         </div>
       </div>
