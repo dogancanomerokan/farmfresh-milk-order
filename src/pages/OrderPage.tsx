@@ -481,9 +481,9 @@ if (itemError) {
                 </div>
               </div>
 
-              <Button type="submit" size="lg" className="w-full py-6 text-base font-semibold">
-                Rezervasyonu Tamamla
-              </Button>
+             <Button type="submit" size="lg" className="w-full py-6 text-base font-semibold" disabled={submitting}>
+  {submitting ? "Gönderiliyor..." : "Rezervasyonu Tamamla"}
+</Button>
               <p className="text-xs text-muted-foreground text-center">Ödeme gerekli değildir. Kapıda ödeme yapılır.</p>
             </form>
 
