@@ -36,6 +36,25 @@ type Product = {
   active: boolean;
 };
 
+type Props = {
+  product?: Product;
+  quantity: string;
+};
+
+const OrderSummary = ({ product, quantity }: Props) => {
+  const qty = Number(quantity || 0);
+  const unitPrice = product?.price || 0;
+  const total = unitPrice * qty;
+
+  if (!product) {
+    return (
+      <div className="bg-card rounded-2xl p-6">
+        <h3 className="text-lg font-semibold mb-4">Sipariş Özeti</h3>
+        <p className="text-muted-foreground">Henüz ürün seçilmedi.</p>
+      </div>
+    );
+  }
+
 const OrderPage = () => {
   const [submitted, setSubmitted] = useState(false);
   const [date, setDate] = useState<Date>();
