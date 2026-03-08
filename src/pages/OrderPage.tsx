@@ -15,6 +15,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import OrderSummary from "@/components/OrderSummary";
 import { getDeliveryZones, isAddressAllowed, DeliveryZone } from "@/lib/delivery-zones";
+import { getIller, getIlceler } from "@/lib/turkey-data";
 
 const timeSlots = [
   "08:00 - 10:00",
@@ -56,11 +57,17 @@ const OrderPage = () => {
 
   const hasZones = zones.length > 0;
 
-  // Benzersiz il listesi
-  const uniqueIller = hasZones ? [...new Set(zones.map((z) => z.il))] : [];
-  // Seçilen il'e göre ilçeler
-  const filteredIlceler = hasZones ? [...new Set(zones.filter((z) => z.il === form.il).map((z) => z.ilce))] : [];
-  // Seçilen ilçeye göre mahalleler
+  // İl listesi: bölge tanımlıysa sadece izin verilenler, yoksa tüm Türkiye
+  const availableIller = hasZones
+    ? [...new Set(zones.map((z) => z.il))].sort((a, b) => a.localeCompare(b, "tr"))
+    : getIller();
+
+  // İlçe listesi: bölge tanımlıysa sadece izin verilenler, yoksa seçilen ilin tüm ilçeleri
+  const availableIlceler = hasZones
+    ? [...new Set(zones.filter((z) => z.il === form.il).map((z) => z.ilce))].sort((a, b) => a.localeCompare(b, "tr"))
+    : getIlceler(form.il);
+
+  // Mahalleler (sadece bölge tanımlıysa)
   const filteredMahalleler = hasZones
     ? zones.filter((z) => z.il === form.il && z.ilce === form.ilce).flatMap((z) => z.mahalleler)
     : [];
@@ -68,25 +75,24 @@ const OrderPage = () => {
 
   // Tek seçenek varsa otomatik seç
   useEffect(() => {
-    if (!hasZones) return;
-    if (uniqueIller.length === 1 && form.il !== uniqueIller[0]) {
-      setForm((prev) => ({ ...prev, il: uniqueIller[0], ilce: "", mahalle: "" }));
+    if (availableIller.length === 1 && form.il !== availableIller[0]) {
+      setForm((prev) => ({ ...prev, il: availableIller[0], ilce: "", mahalle: "" }));
     }
-  }, [hasZones, uniqueIller]);
+  }, [availableIller]);
 
   useEffect(() => {
-    if (!hasZones || !form.il) return;
-    if (filteredIlceler.length === 1 && form.ilce !== filteredIlceler[0]) {
-      setForm((prev) => ({ ...prev, ilce: filteredIlceler[0], mahalle: "" }));
+    if (!form.il) return;
+    if (availableIlceler.length === 1 && form.ilce !== availableIlceler[0]) {
+      setForm((prev) => ({ ...prev, ilce: availableIlceler[0], mahalle: "" }));
     }
-  }, [hasZones, form.il, filteredIlceler]);
+  }, [form.il, availableIlceler]);
 
   useEffect(() => {
-    if (!hasZones || !form.ilce) return;
+    if (!form.ilce || !hasMahalleler) return;
     if (filteredMahalleler.length === 1 && form.mahalle !== filteredMahalleler[0]) {
       setForm((prev) => ({ ...prev, mahalle: filteredMahalleler[0] }));
     }
-  }, [hasZones, form.ilce, filteredMahalleler]);
+  }, [form.ilce, filteredMahalleler]);
 
   const updateField = (field: string, value: string) => {
     setForm((prev) => {
