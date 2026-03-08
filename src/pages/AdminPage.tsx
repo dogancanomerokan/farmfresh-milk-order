@@ -317,6 +317,45 @@ const AdminPage = () => {
   setCreatingAdmin(true);
 
   try {
+    const { data: profileMatches, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .ilike("id", "%");
+
+    if (profileError) throw profileError;
+
+    const { data: authUserResult, error: authLookupError } = await supabase
+      .from("admin_users")
+      .select("email")
+      .eq("email", newAdminEmail.trim().toLowerCase());
+
+    if (authLookupError) throw authLookupError;
+
+    const alreadyExists = (authUserResult || []).some(
+      (item) => item.email.toLowerCase() === newAdminEmail.trim().toLowerCase()
+    );
+
+    if (alreadyExists) {
+      throw new Error("Bu kullanıcı zaten admin listesinde");
+    }
+
+    throw new Error("Bu adım için kullanıcıyı auth.users ile eşleyen güvenli bir backend fonksiyon kurmamız gerekiyor.");
+  } catch (error: any) {
+    console.error(error);
+    toast.error(error.message || "Admin kullanıcı eklenemedi");
+  } finally {
+    setCreatingAdmin(false);
+  }
+};
+
+  if (!newAdminEmail.trim()) {
+    toast.error("E-posta adresi gerekli");
+    return;
+  }
+
+  setCreatingAdmin(true);
+
+  try {
     const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
 
     if (authError) throw authError;
