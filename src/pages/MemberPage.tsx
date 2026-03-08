@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -24,24 +24,39 @@ type AuthUser = {
   email: string;
 };
 
-type OrderItem = {
+type OrderRow = {
   id: string;
-  email?: string;
-  product: string;
-  quantity: string;
-  date: string;
-  timeSlot: string;
-  status?: string;
-  createdAt: string;
+  user_id: string | null;
+  guest_name: string | null;
+  guest_email: string | null;
+  guest_phone: string | null;
+  il: string;
+  ilce: string;
+  mahalle: string | null;
+  address: string;
+  delivery_date: string;
+  time_slot: string;
+  notes: string | null;
+  status: string;
+  total_amount: number;
+  created_at: string;
 };
 
-type Product = {
+type OrderItemRow = {
   id: string;
-  name: string;
-  Volume: string;
-  unit: string;
-  price: number;
-  active: boolean;
+  order_id: string;
+  product_id: string | null;
+  product_name_snapshot: string;
+  volume_snapshot: string | null;
+  unit_snapshot: string | null;
+  unit_price: number;
+  quantity: number;
+  line_total: number;
+  created_at: string;
+};
+
+type MemberOrder = OrderRow & {
+  items: OrderItemRow[];
 };
 
 const MemberPage = () => {
@@ -52,7 +67,7 @@ const MemberPage = () => {
 
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<MemberOrder[]>([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -60,74 +75,112 @@ const MemberPage = () => {
     address: "",
   });
 
-  const [myOrders, setMyOrders] = useState<OrderItem[]>([]);
-
   useEffect(() => {
     const loadMemberData = async () => {
       setLoading(true);
 
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-      if (userError || !user) {
-        navigate("/login");
-        return;
-      }
+        if (userError || !user) {
+          navigate("/login");
+          return;
+        }
 
-      if (!user.email_confirmed_at) {
-        toast.error("Lütfen önce e-posta adresinizi doğrulayın.");
-        await supabase.auth.signOut();
-        navigate("/login");
-        return;
-      }
+        if (!user.email_confirmed_at) {
+          toast.error("Lütfen önce e-posta adresinizi doğrulayın.");
+          await supabase.auth.signOut();
+          navigate("/login");
+          return;
+        }
 
-      setAuthUser({
-        id: user.id,
-        email: user.email || "",
-      });
-
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error("Profil alınamadı:", profileError.message);
-      }
-
-      if (profileData) {
-        setProfile(profileData);
-      } else {
-        setProfile({
+        setAuthUser({
           id: user.id,
-          full_name: user.user_metadata?.full_name || "",
-          phone: user.user_metadata?.phone || "",
-          address: "",
+          email: user.email || "",
         });
+
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error("Profil alınamadı:", profileError.message);
+        }
+
+        if (profileData) {
+          setProfile(profileData);
+        } else {
+          setProfile({
+            id: user.id,
+            full_name: user.user_metadata?.full_name || "",
+            phone: user.user_metadata?.phone || "",
+            address: "",
+          });
+        }
+
+        const { data: ordersData, error: ordersError } = await supabase
+          .from("orders")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (ordersError) {
+          throw ordersError;
+        }
+
+        const orderIds = (ordersData || []).map((o) => o.id);
+
+        let itemsData: OrderItemRow[] = [];
+        if (orderIds.length > 0) {
+          const { data: fetchedItems, error: itemsError } = await supabase
+            .from("order_items")
+            .select("*")
+            .in("order_id", orderIds)
+            .order("created_at", { ascending: true });
+
+          if (itemsError) {
+            throw itemsError;
+          }
+
+          itemsData = fetchedItems || [];
+        }
+
+        const mergedOrders: MemberOrder[] = (ordersData || []).map((order) => ({
+          ...order,
+          items: itemsData.filter((item) => item.order_id === order.id),
+        }));
+
+        setOrders(mergedOrders);
+      } catch (error: any) {
+        console.error("Member page load error:", error);
+        toast.error(error.message || "Üye bilgileri yüklenemedi");
+      } finally {
+        setLoading(false);
       }
-
-      const { data: productsData, error: productsError } = await supabase
-        .from("products")
-        .select("*");
-
-      if (productsError) {
-        console.error("Ürünler alınamadı:", productsError.message);
-      } else {
-        setProducts(productsData || []);
-      }
-
-      const allOrders = JSON.parse(localStorage.getItem("milk-orders") || "[]");
-      const filteredOrders = allOrders.filter((o: any) => o.email === user.email);
-      setMyOrders(filteredOrders);
-
-      setLoading(false);
     };
 
     loadMemberData();
   }, [navigate]);
+
+  const activeOrders = useMemo(
+    () => orders.filter((o) => o.status !== "delivered" && o.status !== "cancelled"),
+    [orders]
+  );
+
+  const completedOrders = useMemo(
+    () => orders.filter((o) => o.status === "delivered"),
+    [orders]
+  );
+
+  const cancelledOrders = useMemo(
+    () => orders.filter((o) => o.status === "cancelled"),
+    [orders]
+  );
 
   const startEdit = () => {
     setFormData({
@@ -141,39 +194,39 @@ const MemberPage = () => {
   const saveProfile = async () => {
     if (!authUser) return;
 
-    const payload = {
-      id: authUser.id,
-      full_name: formData.name,
-      phone: formData.phone || null,
-      address: formData.address || null,
-    };
+    try {
+      const payload = {
+        id: authUser.id,
+        full_name: formData.name,
+        phone: formData.phone || null,
+        address: formData.address || null,
+      };
 
-    const { error } = await supabase.from("profiles").upsert(payload);
+      const { error } = await supabase.from("profiles").upsert(payload);
 
-    if (error) {
-      toast.error("Profil güncellenemedi");
-      console.error(error);
-      return;
+      if (error) throw error;
+
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              full_name: formData.name,
+              phone: formData.phone || null,
+              address: formData.address || null,
+            }
+          : {
+              id: authUser.id,
+              full_name: formData.name,
+              phone: formData.phone || null,
+              address: formData.address || null,
+            }
+      );
+
+      setEditing(false);
+      toast.success("Profil güncellendi");
+    } catch (error: any) {
+      toast.error(error.message || "Profil güncellenemedi");
     }
-
-    setProfile((prev) =>
-      prev
-        ? {
-            ...prev,
-            full_name: formData.name,
-            phone: formData.phone || null,
-            address: formData.address || null,
-          }
-        : {
-            id: authUser.id,
-            full_name: formData.name,
-            phone: formData.phone || null,
-            address: formData.address || null,
-          }
-    );
-
-    setEditing(false);
-    toast.success("Profil güncellendi");
   };
 
   const handleLogout = async () => {
@@ -182,11 +235,68 @@ const MemberPage = () => {
     navigate("/");
   };
 
-  const getProductLabel = (productId: string) => {
-    const product = products.find((p) => String(p.id) === String(productId));
-    if (!product) return productId;
-    return `${product.name} - ${product.Volume} ${product.unit}`;
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "delivered":
+        return "Teslim Edildi";
+      case "cancelled":
+        return "İptal";
+      case "delivering":
+        return "Yolda";
+      case "preparing":
+        return "Hazırlanıyor";
+      case "approved":
+        return "Onaylandı";
+      default:
+        return "Beklemede";
+    }
   };
+
+  const getStatusClass = (status: string) => {
+    if (status === "delivered") return "bg-green-100 text-green-800";
+    if (status === "cancelled") return "bg-red-100 text-red-800";
+    if (status === "delivering") return "bg-blue-100 text-blue-800";
+    if (status === "preparing") return "bg-orange-100 text-orange-800";
+    if (status === "approved") return "bg-emerald-100 text-emerald-800";
+    return "bg-yellow-100 text-yellow-800";
+  };
+
+  const renderOrderCard = (order: MemberOrder) => (
+    <div key={order.id} className="bg-card rounded-xl p-5" style={{ boxShadow: "var(--shadow-card)" }}>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="space-y-2">
+          <div className="space-y-1">
+            {order.items.map((item) => (
+              <p key={item.id} className="font-semibold text-foreground">
+                {item.product_name_snapshot}
+                {item.volume_snapshot ? ` - ${item.volume_snapshot}` : ""}
+                {item.unit_snapshot ? ` ${item.unit_snapshot}` : ""} × {item.quantity}
+              </p>
+            ))}
+            <p className="text-sm text-muted-foreground">
+              📅 {format(parseISO(order.delivery_date), "d MMMM yyyy", { locale: tr })} · {order.time_slot}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              📍 {order.il} / {order.ilce}
+              {order.mahalle ? ` / ${order.mahalle}` : ""} — {order.address}
+            </p>
+            {order.notes && (
+              <p className="text-sm text-muted-foreground">📝 {order.notes}</p>
+            )}
+          </div>
+
+          <div className="text-sm">
+            <span className="text-muted-foreground">Toplam:</span>{" "}
+            <span className="font-semibold text-foreground">{order.total_amount} TL</span>
+          </div>
+        </div>
+
+        <span className={`text-xs font-medium px-3 py-1 rounded-full ${getStatusClass(order.status)}`}>
+          {getStatusLabel(order.status)}
+        </span>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -238,26 +348,15 @@ const MemberPage = () => {
             <div className="space-y-4 max-w-md">
               <div className="space-y-2">
                 <Label>Ad Soyad</Label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
+                <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label>Telefon</Label>
-                <Input
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="05XX XXX XX XX"
-                />
+                <Input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="05XX XXX XX XX" />
               </div>
               <div className="space-y-2">
                 <Label>Adres</Label>
-                <Input
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="Teslimat adresiniz"
-                />
+                <Input value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="Teslimat adresiniz" />
               </div>
               <div className="flex gap-2">
                 <Button size="sm" onClick={saveProfile}>
@@ -282,62 +381,63 @@ const MemberPage = () => {
           )}
         </div>
 
-        {/* Orders Section */}
+        {/* Active Orders */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Package className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-bold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
+              Aktif Siparişlerim
+            </h2>
+            <span className="text-sm text-muted-foreground">({activeOrders.length})</span>
+          </div>
+
+          {activeOrders.length === 0 ? (
+            <div className="text-center py-10 bg-card rounded-2xl" style={{ boxShadow: "var(--shadow-card)" }}>
+              <p className="text-muted-foreground">Aktif siparişiniz yok</p>
+              <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate("/order")}>
+                Yeni Sipariş Ver
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">{activeOrders.map(renderOrderCard)}</div>
+          )}
+        </div>
+
+        {/* Completed Orders */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Package className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-bold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
+              Tamamlanan Siparişler
+            </h2>
+            <span className="text-sm text-muted-foreground">({completedOrders.length})</span>
+          </div>
+
+          {completedOrders.length === 0 ? (
+            <div className="text-center py-10 bg-card rounded-2xl" style={{ boxShadow: "var(--shadow-card)" }}>
+              <p className="text-muted-foreground">Tamamlanan siparişiniz yok</p>
+            </div>
+          ) : (
+            <div className="space-y-3">{completedOrders.map(renderOrderCard)}</div>
+          )}
+        </div>
+
+        {/* Cancelled Orders */}
         <div>
           <div className="flex items-center gap-2 mb-4">
             <Package className="h-5 w-5 text-primary" />
             <h2 className="text-xl font-bold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
-              Siparişlerim
+              İptal Edilen Siparişler
             </h2>
-            <span className="text-sm text-muted-foreground">({myOrders.length})</span>
+            <span className="text-sm text-muted-foreground">({cancelledOrders.length})</span>
           </div>
 
-          {myOrders.length === 0 ? (
-            <div className="text-center py-16 bg-card rounded-2xl" style={{ boxShadow: "var(--shadow-card)" }}>
-              <Package className="h-10 w-10 mx-auto mb-3 text-muted-foreground/40" />
-              <p className="text-muted-foreground">Henüz siparişiniz yok</p>
-              <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate("/order")}>
-                İlk Siparişinizi Verin
-              </Button>
+          {cancelledOrders.length === 0 ? (
+            <div className="text-center py-10 bg-card rounded-2xl" style={{ boxShadow: "var(--shadow-card)" }}>
+              <p className="text-muted-foreground">İptal edilen siparişiniz yok</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {myOrders
-                .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                .map((order: any) => (
-                  <div key={order.id} className="bg-card rounded-xl p-5" style={{ boxShadow: "var(--shadow-card)" }}>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <div className="space-y-1">
-                        <p className="font-semibold text-foreground">
-                          {getProductLabel(order.product)} × {order.quantity}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          📅 {format(parseISO(order.date), "d MMMM yyyy", { locale: tr })} · {order.timeSlot}
-                        </p>
-                      </div>
-                      <span
-                        className={`text-xs font-medium px-3 py-1 rounded-full ${
-                          order.status === "delivered"
-                            ? "bg-green-100 text-green-800"
-                            : order.status === "cancelled"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}
-                      >
-                        {order.status === "delivered"
-                          ? "Teslim Edildi"
-                          : order.status === "cancelled"
-                          ? "İptal"
-                          : order.status === "delivering"
-                          ? "Yolda"
-                          : order.status === "preparing"
-                          ? "Hazırlanıyor"
-                          : "Beklemede"}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-            </div>
+            <div className="space-y-3">{cancelledOrders.map(renderOrderCard)}</div>
           )}
         </div>
       </div>
