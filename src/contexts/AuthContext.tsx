@@ -49,51 +49,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    let mounted = true;
+    let isMounted = true;
 
-    const loadInitialSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    const init = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      if (!mounted) return;
+        if (!isMounted) return;
 
-      if (session?.user) {
-        const appUser = await mapSupabaseUserToAppUser(session.user);
-        if (mounted) setUser(appUser);
-      } else {
-        setUser(null);
+        if (session?.user) {
+          const appUser = await mapSupabaseUserToAppUser(session.user);
+          if (isMounted) setUser(appUser);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error("Auth init error:", error);
+        if (isMounted) setUser(null);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
-
-      if (mounted) setIsLoading(false);
     };
 
-    loadInitialSession();
+    init();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        const appUser = await mapSupabaseUserToAppUser(session.user);
-        if (mounted) setUser(appUser);
-      } else {
-        if (mounted) setUser(null);
-      }
-
-      if (mounted) setIsLoading(false);
+    } = supabase.auth.onAuthStateChange((_, session) => {
+      void (async () => {
+        try {
+          if (session?.user) {
+            const appUser = await mapSupabaseUserToAppUser(session.user);
+            if (isMounted) setUser(appUser);
+          } else {
+            if (isMounted) setUser(null);
+          }
+        } catch (error) {
+          console.error("Auth state error:", error);
+          if (isMounted) setUser(null);
+        } finally {
+          if (isMounted) setIsLoading(false);
+        }
+      })();
     });
 
     return () => {
-      mounted = false;
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
   const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       if (error.message.toLowerCase().includes("email not confirmed")) {
@@ -110,7 +119,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(appUser);
   };
 
-  const register = async (data: { email: string; password: string; name: string; phone?: string }) => {
+  const register = async (data: {
+    email: string;
+    password: string;
+    name: string;
+    phone?: string;
+  }) => {
     const { error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
@@ -130,9 +144,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) {
-      throw new Error(error.message);
-    }
+    if (error) throw new Error(error.message);
     setUser(null);
   };
 
@@ -147,10 +159,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const { error } = await supabase.from("profiles").upsert(payload);
-
-    if (error) {
-      throw new Error(error.message);
-    }
+    if (error) throw new Error(error.message);
 
     setUser({
       ...user,
