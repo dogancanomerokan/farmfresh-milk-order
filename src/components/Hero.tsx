@@ -29,7 +29,7 @@ const Hero = () => {
               </Button>
             </Link>
             <a href="#products">
-              <Button size="lg" className="text-base px-8 py-6 font-semibold bg-primary-foreground text-primary hover:bg-primary-foreground/90 shadow-lg">
+              <Button size="lg" variant="secondary" className="text-base px-8 py-6 font-semibold shadow-lg">
                 Ürünlerimiz
               </Button>
             </a>
