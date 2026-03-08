@@ -31,8 +31,9 @@ const timeSlots = [
 type Product = {
   id: string;
   name: string;
-  price: number;
+  Volume: string;
   unit: string;
+  price: number;
   active: boolean;
 };
 
@@ -63,28 +64,30 @@ const OrderPage = () => {
   }, []);
 
   useEffect(() => {
-    const loadProducts = async () => {
-      setLoadingProducts(true);
+  const loadProducts = async () => {
+    setLoadingProducts(true);
 
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("active", true)
-        .order("created_at", { ascending: true });
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .eq("active", true);
 
-      if (error) {
-        console.error("Ürünler alınamadı:", error.message);
-        toast.error("Ürünler yüklenemedi");
-        setProducts([]);
-      } else {
-        setProducts(data || []);
-      }
+    if (error) {
+      console.error("Ürünler alınamadı:", error.message);
+      toast.error("Ürünler yüklenemedi");
+      setProducts([]);
+    } else {
+      const sortedProducts = (data || []).sort(
+        (a, b) => Number(b.Volume) - Number(a.Volume)
+      );
+      setProducts(sortedProducts);
+    }
 
-      setLoadingProducts(false);
-    };
+    setLoadingProducts(false);
+  };
 
-    loadProducts();
-  }, []);
+  loadProducts();
+}, []);
 
   const hasZones = zones.length > 0;
 
@@ -355,10 +358,10 @@ const OrderPage = () => {
                           </SelectItem>
                         ) : (
                           products.map((p) => (
-                            <SelectItem key={p.id} value={String(p.id)}>
-                              {p.name} - {p.unit} / {p.price} TL
-                            </SelectItem>
-                          ))
+  <SelectItem key={p.id} value={String(p.id)}>
+    {p.name} - {p.Volume} {p.unit} / {p.price} TL
+  </SelectItem>
+))
                         )}
                       </SelectContent>
                     </Select>
