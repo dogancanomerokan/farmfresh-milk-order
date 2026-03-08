@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -8,9 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabaseClient";
 
 const RegisterPage = () => {
-  const { register } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -29,18 +28,35 @@ const RegisterPage = () => {
       setError("Şifre en az 6 karakter olmalıdır");
       return;
     }
+
     if (password !== confirmPw) {
       setError("Şifreler eşleşmiyor");
       return;
     }
 
     setLoading(true);
+
     try {
-      await register({ email, password, name, phone: phone || undefined });
-      toast.success("Kayıt başarılı! Hoş geldiniz 🎉");
-      navigate("/member");
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/login`,
+          data: {
+            full_name: name,
+            phone: phone || null,
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success("Kayıt başarılı! Lütfen e-posta adresinizi doğrulayın.");
+      navigate("/login");
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "Kayıt sırasında bir hata oluştu");
     } finally {
       setLoading(false);
     }
@@ -86,7 +102,9 @@ const RegisterPage = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="reg-phone">Telefon <span className="text-muted-foreground">(opsiyonel)</span></Label>
+              <Label htmlFor="reg-phone">
+                Telefon <span className="text-muted-foreground">(opsiyonel)</span>
+              </Label>
               <Input
                 id="reg-phone"
                 type="tel"
@@ -130,7 +148,9 @@ const RegisterPage = () => {
             </div>
 
             {error && (
-              <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</p>
+              <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">
+                {error}
+              </p>
             )}
 
             <Button type="submit" className="w-full" disabled={loading}>
