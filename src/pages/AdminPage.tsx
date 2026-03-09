@@ -253,12 +253,6 @@ const openAddressInMap = (order: AdminOrder) => {
   window.open(mapUrl, "_blank", "noopener,noreferrer");
 };
 
-  const getFullAddress = (order: AdminOrder) => {
-    return [order.address, order.mahalle, order.ilce, order.il, "Türkiye"]
-      .filter(Boolean)
-      .join(", ");
-  };
-
     if (!fullAddress.trim()) {
       toast.error("Adres bulunamadı");
       return;
