@@ -234,6 +234,13 @@ const AdminPage = () => {
     return found?.full_name || found?.email || "Bilinmiyor";
   };
 
+  const canEditOrder = (order: AdminOrder) => {
+    if (!adminUser) return false;
+    if (adminUser.role === "super_admin") return true;
+    if (!order.claimed_by_admin_id) return true;
+    return order.claimed_by_admin_id === adminUser.id;
+  };
+
   const loadOrders = async () => {
     setOrdersLoading(true);
 
@@ -366,6 +373,16 @@ const AdminPage = () => {
     try {
       const targetOrder = orders.find((o) => o.id === id);
       if (!targetOrder) return;
+
+      if (adminUser?.role !== "super_admin") {
+        if (
+          targetOrder.claimed_by_admin_id &&
+          targetOrder.claimed_by_admin_id !== adminUser?.id
+        ) {
+          toast.error("Bu sipariş başka bir operasyon adminin üzerinde.");
+          return;
+        }
+      }
 
       const updatePayload: Partial<OrderRow> = {
         status,
@@ -654,7 +671,9 @@ const AdminPage = () => {
 
   const myDeliveredOrders = adminUser
     ? orders.filter(
-        (o) => o.status === "delivered" && o.delivered_by_admin_id === adminUser.id
+        (o) =>
+          o.status === "delivered" &&
+          o.delivered_by_admin_id === adminUser.id
       )
     : [];
 
@@ -767,7 +786,6 @@ const AdminPage = () => {
             </div>
           </div>
 
-          {/* İstatistikler */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {[
               {
@@ -802,7 +820,6 @@ const AdminPage = () => {
             ))}
           </div>
 
-          {/* Benim operasyon özetim */}
           <div className="grid md:grid-cols-2 gap-4 mb-8">
             <div
               className="bg-card rounded-xl p-5"
@@ -841,7 +858,6 @@ const AdminPage = () => {
             </div>
           </div>
 
-          {/* Filtreler */}
           <div
             className="bg-card rounded-xl p-4 mb-6 flex flex-col sm:flex-row gap-3 items-start sm:items-end"
             style={{ boxShadow: "var(--shadow-card)" }}
@@ -957,7 +973,6 @@ const AdminPage = () => {
             </div>
           </div>
 
-          {/* Bugün teslim edilecekler */}
           <div
             className="mb-8 bg-card rounded-xl p-5 md:p-6"
             style={{ boxShadow: "var(--shadow-card)" }}
@@ -1011,7 +1026,6 @@ const AdminPage = () => {
             )}
           </div>
 
-          {/* Sipariş listesi */}
           {filtered.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground">
               <Package className="h-12 w-12 mx-auto mb-4 opacity-40" />
@@ -1152,6 +1166,7 @@ const AdminPage = () => {
                           onValueChange={(v) =>
                             updateStatus(order.id, v as OrderStatus)
                           }
+                          disabled={!canEditOrder(order)}
                         >
                           <SelectTrigger className="w-[180px]">
                             <SelectValue />
@@ -1183,7 +1198,6 @@ const AdminPage = () => {
             </div>
           )}
 
-          {/* Admin kullanıcı yönetimi */}
           {adminUser.role === "super_admin" && (
             <div
               className="mt-10 bg-card rounded-xl p-5 md:p-6"
@@ -1302,7 +1316,6 @@ const AdminPage = () => {
             </div>
           )}
 
-          {/* Teslimat Bölgesi Yönetimi */}
           <div className="mt-10">
             <DeliveryZoneManager />
           </div>
