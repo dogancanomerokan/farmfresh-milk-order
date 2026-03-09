@@ -236,6 +236,24 @@ const AdminPage = () => {
   };
 
   const getFullAddress = (order: AdminOrder) => {
+  return [order.address, order.mahalle, order.ilce, order.il, "Türkiye"]
+    .filter(Boolean)
+    .join(", ");
+};
+
+const openAddressInMap = (order: AdminOrder) => {
+  const fullAddress = getFullAddress(order);
+
+  if (!fullAddress.trim()) {
+    toast.error("Adres bulunamadı");
+    return;
+  }
+
+  const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`;
+  window.open(mapUrl, "_blank", "noopener,noreferrer");
+};
+
+  const getFullAddress = (order: AdminOrder) => {
     return [order.address, order.mahalle, order.ilce, order.il, "Türkiye"]
       .filter(Boolean)
       .join(", ");
