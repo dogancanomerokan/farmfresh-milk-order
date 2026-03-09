@@ -10,6 +10,7 @@ import MemberPage from "./pages/MemberPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import AdminPage from "./pages/AdminPage";
+import CustomerManagementPage from "./pages/CustomerManagementPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
