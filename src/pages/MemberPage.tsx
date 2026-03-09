@@ -303,7 +303,7 @@ const MemberPage = () => {
           </div>
         </div>
 
-        <span className={`text-xs font-medium px-8 py-1 rounded-full ${getStatusClass(order.status)}`}>
+        <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusClass(order.status)}`}>
           {getStatusLabel(order.status)}
         </span>
       </div>
