@@ -182,20 +182,17 @@ const statusConfig: Record<
  
 const DispatchPage = () => {
 
-  const [orders, setOrders] = useState<AdminOrder[]>([]);
-
-  const myRouteOrders = orders.filter(
-    (order) =>
-      order.claimed_by_admin_id === adminUser?.id &&
-      ACTIVE_ORDER_STATUSES.includes(order.status as any) &&
-      order.address
-  );
-  
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const [adminUser, setAdminUser] = useState<AdminUserRow | null>(null);
 
   const [orders, setOrders] = useState<AdminOrder[]>([]);
+    const myRouteOrders = orders.filter(
+    (order) =>
+      order.claimed_by_admin_id === adminUser?.id &&
+      ACTIVE_ORDER_STATUSES.includes(order.status as any) &&
+      order.address
+  );
   const [ordersLoading, setOrdersLoading] = useState(false);
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
