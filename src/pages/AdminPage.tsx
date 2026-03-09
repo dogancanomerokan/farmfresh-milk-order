@@ -731,6 +731,9 @@ const AdminPage = () => {
     );
   }
 
+console.log("adminUsers", adminUsers);
+console.log("claimed_by_admin_id", order.claimed_by_admin_id);
+  
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
