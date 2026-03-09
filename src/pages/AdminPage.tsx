@@ -24,6 +24,7 @@ import {
   Trash2,
   Users,
   Hand,
+  MapPinned,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -232,6 +233,27 @@ const AdminPage = () => {
     if (!adminId) return "—";
     const found = adminUsers.find((a) => a.id === adminId);
     return found?.full_name || found?.email || "Bilinmiyor";
+  };
+
+  const getFullAddress = (order: AdminOrder) => {
+    return [order.address, order.mahalle, order.ilce, order.il, "Türkiye"]
+      .filter(Boolean)
+      .join(", ");
+  };
+
+  const openAddressInMap = (order: AdminOrder) => {
+    const fullAddress = getFullAddress(order);
+
+    if (!fullAddress.trim()) {
+      toast.error("Adres bulunamadı");
+      return;
+    }
+
+    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      fullAddress
+    )}`;
+
+    window.open(mapUrl, "_blank", "noopener,noreferrer");
   };
 
   const canEditOrder = (order: AdminOrder) => {
@@ -730,7 +752,7 @@ const AdminPage = () => {
       </div>
     );
   }
-  
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -1094,11 +1116,27 @@ const AdminPage = () => {
                           </p>
                           <p>📞 {order.guest_phone || "—"}</p>
                           <p>✉️ {order.guest_email || "—"}</p>
-                          <p className="sm:col-span-2">
-                            📍 {order.il} / {order.ilce}
-                            {order.mahalle ? ` / ${order.mahalle}` : ""} —{" "}
-                            {order.address}
-                          </p>
+
+                          <div className="sm:col-span-2 flex items-start justify-between gap-3">
+                            <p className="min-w-0">
+                              📍 {order.il} / {order.ilce}
+                              {order.mahalle ? ` / ${order.mahalle}` : ""} —{" "}
+                              {order.address}
+                            </p>
+
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 shrink-0"
+                              onClick={() => openAddressInMap(order)}
+                              title="Haritada aç"
+                              aria-label="Haritada aç"
+                            >
+                              <MapPinned className="h-4 w-4" />
+                            </Button>
+                          </div>
+
                           {order.notes && (
                             <p className="sm:col-span-2 italic">
                               💬 {order.notes}
