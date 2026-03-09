@@ -1,5 +1,5 @@
 export const ACTIVE_ORDER_STATUSES = [
-  "approved",
+   "approved",
   "preparing",
   "delivering",
 ];
@@ -12,13 +12,7 @@ export const buildGoogleMapsDirectionsUrl = (orders: any[]) => {
 
   const addresses = orders
     .map((o) =>
-      [
-        o.address,
-        o.mahalle,
-        o.ilce,
-        o.il,
-        "Türkiye",
-      ]
+      [o.address, o.mahalle, o.ilce, o.il, "Türkiye"]
         .filter(Boolean)
         .join(", ")
     )
@@ -26,10 +20,14 @@ export const buildGoogleMapsDirectionsUrl = (orders: any[]) => {
 
   if (addresses.length === 0) return null;
 
-  const destination = addresses[addresses.length - 1];
+  if (addresses.length === 1) {
+    return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
+      DEPOT_ADDRESS
+    )}&destination=${encodeURIComponent(addresses[0])}&travelmode=driving`;
+  }
 
-  // optimize:true -> Google Maps en kısa rotayı hesaplar
-  const waypoints = ["optimize:true", ...addresses.slice(0, -1)].join("|");
+  const destination = addresses[addresses.length - 1];
+  const waypoints = addresses.slice(0, -1).join("|");
 
   let url = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${encodeURIComponent(
     DEPOT_ADDRESS
