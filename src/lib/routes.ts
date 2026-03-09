@@ -5,6 +5,9 @@ export const ACTIVE_ORDER_STATUSES = [
   "delivering",
 ];
 
+const DEPOT_ADDRESS =
+  "Mimarsinan Mahallesi Özgürlük Caddesi 7087 Sokak Pearl Life Sitesi Silivri İstanbul";
+
 export const buildGoogleMapsDirectionsUrl = (orders: any[]) => {
   if (!orders || orders.length === 0) return null;
 
@@ -15,7 +18,7 @@ export const buildGoogleMapsDirectionsUrl = (orders: any[]) => {
         o.mahalle,
         o.ilce,
         o.il,
-        "Türkiye"
+        "Türkiye",
       ]
         .filter(Boolean)
         .join(", ");
@@ -24,12 +27,11 @@ export const buildGoogleMapsDirectionsUrl = (orders: any[]) => {
 
   if (addresses.length === 0) return null;
 
-  const origin = addresses[0];
   const destination = addresses[addresses.length - 1];
-  const waypoints = addresses.slice(1, -1).join("|");
+  const waypoints = addresses.slice(0, -1).join("|");
 
   let url = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${encodeURIComponent(
-    origin
+    DEPOT_ADDRESS
   )}&destination=${encodeURIComponent(destination)}`;
 
   if (waypoints) {
