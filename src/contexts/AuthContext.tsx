@@ -1,155 +1,271 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Menu, X, Milk, User, LogIn } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import { supabase } from "@/lib/supabaseClient";
 
-const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const { user, adminRole, adminRoleLoading } = useAuth();
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  phone?: string;
+  address?: string;
+}
 
-  return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <Milk className="h-8 w-8 text-primary" />
-          <span
-            className="text-xl font-bold font-heading text-foreground"
-            style={{ fontFamily: "var(--font-heading)" }}
-          >
-            Sade Süt
-          </span>
-        </Link>
+export type AdminRole = "operations_admin" | "super_admin" | null;
 
-        <div className="hidden md:flex items-center gap-6">
-          <Link
-            to="/"
-            className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-          >
-            Ana Sayfa
-          </Link>
+interface AuthContextType {
+  user: User | null;
+  isLoading: boolean;
+  adminRole: AdminRole;
+  adminRoleLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (data: {
+    email: string;
+    password: string;
+    name: string;
+    phone?: string;
+  }) => Promise<void>;
+  logout: () => Promise<void>;
+  updateProfile: (data: Partial<User>) => Promise<void>;
+}
 
-          <Link
-            to="/order"
-            className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-          >
-            Sipariş Ver
-          </Link>
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-          {!adminRoleLoading && adminRole && (
-            <Link
-              to="/admin"
-              className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-            >
-              Yönetim Paneli
-            </Link>
-          )}
-
-          {!adminRoleLoading && adminRole && (
-            <Link
-              to="/dispatch"
-              className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-            >
-              Dağıtım
-            </Link>
-          )}
-
-          {user ? (
-            <Link
-              to="/member"
-              className="text-sm font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1"
-            >
-              <User className="h-4 w-4" /> {(user.name || "Üye").split(" ")[0]}
-            </Link>
-          ) : (
-            <Link
-              to="/login"
-              className="text-sm font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1"
-            >
-              <LogIn className="h-4 w-4" /> Giriş Yap
-            </Link>
-          )}
-
-          <Link to="/order">
-            <Button variant="default" size="sm">
-              Süt Rezerve Et
-            </Button>
-          </Link>
-        </div>
-
-        <button
-          className="md:hidden text-foreground"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
-      </div>
-
-      {isOpen && (
-        <div className="md:hidden bg-background border-b border-border px-4 pb-4 space-y-3">
-          <Link
-            to="/"
-            onClick={() => setIsOpen(false)}
-            className="block text-sm font-medium text-foreground py-2"
-          >
-            Ana Sayfa
-          </Link>
-
-          <Link
-            to="/order"
-            onClick={() => setIsOpen(false)}
-            className="block text-sm font-medium text-foreground py-2"
-          >
-            Sipariş Ver
-          </Link>
-
-          {!adminRoleLoading && adminRole && (
-            <Link
-              to="/admin"
-              onClick={() => setIsOpen(false)}
-              className="block text-sm font-medium text-foreground py-2"
-            >
-              Yönetim Paneli
-            </Link>
-          )}
-
-          {!adminRoleLoading && adminRole && (
-            <Link
-              to="/dispatch"
-              onClick={() => setIsOpen(false)}
-              className="block text-sm font-medium text-foreground py-2"
-            >
-              Dağıtım
-            </Link>
-          )}
-
-          {user ? (
-            <Link
-              to="/member"
-              onClick={() => setIsOpen(false)}
-              className="block text-sm font-medium text-foreground py-2 flex items-center gap-1"
-            >
-              <User className="h-4 w-4" /> {(user.name || "Üye").split(" ")[0]}
-            </Link>
-          ) : (
-            <Link
-              to="/login"
-              onClick={() => setIsOpen(false)}
-              className="block text-sm font-medium text-foreground py-2 flex items-center gap-1"
-            >
-              <LogIn className="h-4 w-4" /> Giriş Yap
-            </Link>
-          )}
-
-          <Link to="/order" onClick={() => setIsOpen(false)}>
-            <Button variant="default" size="sm" className="w-full">
-              Süt Rezerve Et
-            </Button>
-          </Link>
-        </div>
-      )}
-    </nav>
-  );
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
+  return ctx;
 };
 
-export default Navbar;
+const mapSupabaseUserToAppUser = async (authUser: any): Promise<User | null> => {
+  if (!authUser) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", authUser.id)
+    .maybeSingle();
+
+  return {
+    id: authUser.id,
+    email: authUser.email || "",
+    name: profile?.full_name || authUser.user_metadata?.full_name || "",
+    phone: profile?.phone || authUser.user_metadata?.phone || "",
+    address: profile?.address || "",
+  };
+};
+
+const getAdminRoleByAuthUserId = async (
+  authUserId: string
+): Promise<AdminRole> => {
+  const { data, error } = await supabase
+    .from("admin_users")
+    .select("role")
+    .eq("auth_user_id", authUserId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Admin rolü alınamadı:", error);
+    return null;
+  }
+
+  return (data?.role as AdminRole) ?? null;
+};
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [adminRole, setAdminRole] = useState<AdminRole>(null);
+  const [adminRoleLoading, setAdminRoleLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const init = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!isMounted) return;
+
+        if (session?.user) {
+          const [appUser, role] = await Promise.all([
+            mapSupabaseUserToAppUser(session.user),
+            getAdminRoleByAuthUserId(session.user.id),
+          ]);
+
+          if (!isMounted) return;
+
+          setUser(appUser);
+          setAdminRole(role);
+        } else {
+          setUser(null);
+          setAdminRole(null);
+        }
+      } catch (error) {
+        console.error("Auth init error:", error);
+        if (isMounted) {
+          setUser(null);
+          setAdminRole(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+          setAdminRoleLoading(false);
+        }
+      }
+    };
+
+    init();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_, session) => {
+      void (async () => {
+        try {
+          if (isMounted) {
+            setAdminRoleLoading(true);
+          }
+
+          if (session?.user) {
+            const [appUser, role] = await Promise.all([
+              mapSupabaseUserToAppUser(session.user),
+              getAdminRoleByAuthUserId(session.user.id),
+            ]);
+
+            if (!isMounted) return;
+
+            setUser(appUser);
+            setAdminRole(role);
+          } else {
+            if (!isMounted) return;
+
+            setUser(null);
+            setAdminRole(null);
+          }
+        } catch (error) {
+          console.error("Auth state error:", error);
+          if (isMounted) {
+            setUser(null);
+            setAdminRole(null);
+          }
+        } finally {
+          if (isMounted) {
+            setIsLoading(false);
+            setAdminRoleLoading(false);
+          }
+        }
+      })();
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      if (error.message.toLowerCase().includes("email not confirmed")) {
+        throw new Error("Lütfen önce e-posta adresinizi doğrulayın.");
+      }
+      throw new Error(error.message);
+    }
+
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+
+    if (authUser) {
+      const [appUser, role] = await Promise.all([
+        mapSupabaseUserToAppUser(authUser),
+        getAdminRoleByAuthUserId(authUser.id),
+      ]);
+
+      setUser(appUser);
+      setAdminRole(role);
+    }
+  };
+
+  const register = async (data: {
+    email: string;
+    password: string;
+    name: string;
+    phone?: string;
+  }) => {
+    const { error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`,
+        data: {
+          full_name: data.name,
+          phone: data.phone || null,
+        },
+      },
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  };
+
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw new Error(error.message);
+
+    setUser(null);
+    setAdminRole(null);
+  };
+
+  const updateProfile = async (data: Partial<User>) => {
+    if (!user) return;
+
+    const payload = {
+      id: user.id,
+      full_name: data.name ?? user.name,
+      phone: data.phone ?? user.phone ?? null,
+      address: data.address ?? user.address ?? null,
+    };
+
+    const { error } = await supabase.from("profiles").upsert(payload);
+    if (error) throw new Error(error.message);
+
+    setUser({
+      ...user,
+      name: payload.full_name,
+      phone: payload.phone || "",
+      address: payload.address || "",
+    });
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoading,
+        adminRole,
+        adminRoleLoading,
+        login,
+        register,
+        logout,
+        updateProfile,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
