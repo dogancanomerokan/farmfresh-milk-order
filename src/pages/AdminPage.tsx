@@ -1165,6 +1165,29 @@ const myRouteOrders = orders.filter(
                             >
                               <MapPinned className="h-4 w-4" />
                             </Button>
+                            <Button
+  variant="default"
+  size="sm"
+  onClick={() => {
+    const address = [
+      order.address,
+      order.mahalle,
+      order.ilce,
+      order.il,
+      "Türkiye",
+    ]
+      .filter(Boolean)
+      .join(", ");
+
+    const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+      address
+    )}&travelmode=driving`;
+
+    window.open(navUrl, "_blank");
+  }}
+>
+  🚚 Navigasyon
+</Button>
                           </div>
 
                           {order.notes && (
