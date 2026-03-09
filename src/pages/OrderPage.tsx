@@ -19,6 +19,17 @@ import { getIller, getIlceler } from "@/lib/turkey-data";
 import { getMahalleler } from "@/lib/mahalle-data";
 import { supabase } from "@/lib/supabaseClient";
 
+const { data: freezeRow } = await supabase
+  .from("customer_account_controls")
+  .select("is_frozen")
+  .eq("user_id", user.id)
+  .maybeSingle();
+
+if (freezeRow?.is_frozen) {
+  toast.error("Hesabınız geçici olarak işlem yapmaya kapatılmıştır.");
+  return;
+}
+
 const timeSlots = [
   "08:00 - 10:00",
   "10:00 - 12:00",
