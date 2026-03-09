@@ -19,12 +19,6 @@ import { getIller, getIlceler } from "@/lib/turkey-data";
 import { getMahalleler } from "@/lib/mahalle-data";
 import { supabase } from "@/lib/supabaseClient";
 
-const { data: freezeRow } = await supabase
-  .from("customer_account_controls")
-  .select("is_frozen")
-  .eq("user_id", user.id)
-  .maybeSingle();
-
 const timeSlots = [
   "08:00 - 10:00",
   "10:00 - 12:00",
@@ -184,12 +178,6 @@ const OrderPage = () => {
     if (!selectedProduct) {
       toast.error("Lütfen bir ürün seçin");
       return;
-
-      if (freezeRow?.is_frozen) {
-  toast.error("Hesabınız geçici olarak işlem yapmaya kapatılmıştır.");
-  return;
-}
-      
     }
 
     setSubmitting(true);
@@ -199,34 +187,50 @@ const OrderPage = () => {
         data: { user },
       } = await supabase.auth.getUser();
 
+      if (user?.id) {
+        const { data: freezeRow, error: freezeError } = await supabase
+          .from("customer_account_controls")
+          .select("is_frozen")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (freezeError) {
+          throw freezeError;
+        }
+
+        if (freezeRow?.is_frozen) {
+          toast.error("Hesabınız geçici olarak işlem yapmaya kapatılmıştır.");
+          return;
+        }
+      }
+
       const quantityNumber = Number(form.quantity || 1);
       const unitPrice = Number(selectedProduct.price || 0);
       const totalAmount = unitPrice * quantityNumber;
+      const orderId = crypto.randomUUID();
 
-     const orderId = crypto.randomUUID();
+      const { error: orderError } = await supabase
+        .from("orders")
+        .insert({
+          id: orderId,
+          user_id: user?.id ?? null,
+          guest_name: form.name,
+          guest_email: form.email,
+          guest_phone: form.phone,
+          il: form.il,
+          ilce: form.ilce,
+          mahalle: form.mahalle || null,
+          address: form.address,
+          delivery_date: date.toISOString().split("T")[0],
+          time_slot: form.timeSlot,
+          notes: form.notes || null,
+          status: "pending",
+          total_amount: totalAmount,
+        });
 
-const { error: orderError } = await supabase
-  .from("orders")
-  .insert({
-    id: orderId,
-    user_id: user?.id ?? null,
-    guest_name: form.name,
-    guest_email: form.email,
-    guest_phone: form.phone,
-    il: form.il,
-    ilce: form.ilce,
-    mahalle: form.mahalle || null,
-    address: form.address,
-    delivery_date: date.toISOString().split("T")[0],
-    time_slot: form.timeSlot,
-    notes: form.notes || null,
-    status: "pending",
-    total_amount: totalAmount,
-  });
-
-if (orderError) {
-  throw orderError;
-}
+      if (orderError) {
+        throw orderError;
+      }
 
       const { error: itemError } = await supabase.from("order_items").insert({
         order_id: orderId,
@@ -240,7 +244,7 @@ if (orderError) {
       });
 
       if (itemError) {
-        await supabase.from("orders").delete().eq("id", orderData.id);
+        await supabase.from("orders").delete().eq("id", orderId);
         throw itemError;
       }
 
