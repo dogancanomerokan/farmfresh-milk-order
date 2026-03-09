@@ -259,9 +259,6 @@ const openAddressInMap = (order: AdminOrder) => {
       .join(", ");
   };
 
-  const openAddressInMap = (order: AdminOrder) => {
-    const fullAddress = getFullAddress(order);
-
     if (!fullAddress.trim()) {
       toast.error("Adres bulunamadı");
       return;
