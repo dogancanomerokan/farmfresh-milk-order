@@ -683,9 +683,12 @@ const AdminPage = () => {
   const today = new Date();
   const tomorrow = addDays(new Date(), 1);
 
-  const todaysOrders = orders.filter((o) =>
-    isSameDay(parseISO(o.delivery_date), today)
-  );
+  const todaysOrders = orders.filter(
+  (o) =>
+    isSameDay(parseISO(o.delivery_date), today) &&
+    o.status !== "cancelled" &&
+    o.status !== "delivered"
+);
 
   const myDeliveredOrders = adminUser
     ? orders.filter(
