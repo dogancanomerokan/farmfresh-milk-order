@@ -13,7 +13,7 @@ import {
 import { Users, RefreshCw, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
-import CustomerDetailDrawer from "@/components/CustomerDetailDrawer";
+import { CustomerDetailDrawer } from "@/components/CustomerDetailDrawer";
 import {
     getCustomers,
     type CustomerOverviewRow,
