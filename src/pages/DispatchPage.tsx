@@ -152,7 +152,6 @@ const statusConfig: Record<
           item.unit_snapshot || ""
         } x${item.quantity} (${total} TL)`.trim();
       })
-      .join(" | ");
 
     return [
       o.id,
