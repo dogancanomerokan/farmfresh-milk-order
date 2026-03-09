@@ -112,23 +112,6 @@ type AdminOrder = OrderRow & {
   items: OrderItemRow[];
 };
 
-const activeOrdersForRoute = orders.filter(
-  (order) =>
-    ACTIVE_ORDER_STATUSES.includes(order.status as any) &&
-    order.address
-);
-
-const handleOpenBulkRoute = () => {
-  const url = buildGoogleMapsDirectionsUrl(activeOrdersForRoute);
-
-  if (!url) {
-    toast.error("Rota için uygun aktif sipariş bulunamadı.");
-    return;
-  }
-
-  window.open(url, "_blank", "noopener,noreferrer");
-};
-
 const statusConfig: Record<
   OrderStatus,
   { label: string; icon: ElementType; color: string }
@@ -230,6 +213,23 @@ const exportToCSV = (orders: AdminOrder[]) => {
 };
 
 const AdminPage = () => {
+  const handleOpenBulkRoute = () => {
+  const activeOrdersForRoute = orders.filter(
+    (order) =>
+      ACTIVE_ORDER_STATUSES.includes(order.status as any) &&
+      order.address
+  );
+
+  const url = buildGoogleMapsDirectionsUrl(activeOrdersForRoute);
+
+  if (!url) {
+    toast.error("Rota için uygun aktif sipariş bulunamadı.");
+    return;
+  }
+
+  window.open(url, "_blank", "noopener,noreferrer");
+};
+  
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const [adminUser, setAdminUser] = useState<AdminUserRow | null>(null);
@@ -804,6 +804,14 @@ const AdminPage = () => {
             </div>
 
             <div className="flex gap-2 self-start">
+              <Button
+    variant="default"
+    size="sm"
+    onClick={handleOpenBulkRoute}
+  >
+    <MapPinned className="h-4 w-4 mr-2" />
+    Toplu Rota Aç
+  </Button>
               <Button
                 variant="outline"
                 size="sm"
