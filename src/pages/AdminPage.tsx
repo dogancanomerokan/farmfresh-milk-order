@@ -213,13 +213,7 @@ const exportToCSV = (orders: AdminOrder[]) => {
 };
 
 const AdminPage = () => {
-  const handleOpenBulkRoute = () => {
-  const activeOrdersForRoute = orders.filter(
-    (order) =>
-      ACTIVE_ORDER_STATUSES.includes(order.status as any) &&
-      order.address
-  );
-
+ const handleOpenBulkRoute = () => {
   const url = buildGoogleMapsDirectionsUrl(activeOrdersForRoute);
 
   if (!url) {
@@ -700,7 +694,13 @@ const AdminPage = () => {
     ).length,
     delivered: orders.filter((o) => o.status === "delivered").length,
   };
-
+  
+const activeOrdersForRoute = orders.filter(
+  (order) =>
+    ACTIVE_ORDER_STATUSES.includes(order.status as any) &&
+    order.address
+);
+  
   const today = new Date();
   const tomorrow = addDays(new Date(), 1);
 
@@ -805,13 +805,14 @@ const AdminPage = () => {
 
             <div className="flex gap-2 self-start">
               <Button
-    variant="default"
-    size="sm"
-    onClick={handleOpenBulkRoute}
-  >
-    <MapPinned className="h-4 w-4 mr-2" />
-    Toplu Rota Aç
-  </Button>
+  variant="default"
+  size="sm"
+  onClick={handleOpenBulkRoute}
+  disabled={activeOrdersForRoute.length === 0}
+>
+  <MapPinned className="h-4 w-4 mr-2" />
+  Toplu Rota Aç
+</Button>
               <Button
                 variant="outline"
                 size="sm"
