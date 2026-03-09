@@ -1,177 +1,155 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Menu, X, Milk, User, LogIn } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  phone?: string;
-  address?: string;
-}
-
-interface AuthContextType {
-  user: User | null;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (data: { email: string; password: string; name: string; phone?: string }) => Promise<void>;
-  logout: () => Promise<void>;
-  updateProfile: (data: Partial<User>) => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
-};
-
-const mapSupabaseUserToAppUser = async (authUser: any): Promise<User | null> => {
-  if (!authUser) return null;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", authUser.id)
-    .maybeSingle();
-
-  return {
-    id: authUser.id,
-    email: authUser.email || "",
-    name: profile?.full_name || authUser.user_metadata?.full_name || "",
-    phone: profile?.phone || authUser.user_metadata?.phone || "",
-    address: profile?.address || "",
-  };
-};
-
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const init = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!isMounted) return;
-
-        if (session?.user) {
-          const appUser = await mapSupabaseUserToAppUser(session.user);
-          if (isMounted) setUser(appUser);
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        console.error("Auth init error:", error);
-        if (isMounted) setUser(null);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-
-    init();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_, session) => {
-      void (async () => {
-        try {
-          if (session?.user) {
-            const appUser = await mapSupabaseUserToAppUser(session.user);
-            if (isMounted) setUser(appUser);
-          } else {
-            if (isMounted) setUser(null);
-          }
-        } catch (error) {
-          console.error("Auth state error:", error);
-          if (isMounted) setUser(null);
-        } finally {
-          if (isMounted) setIsLoading(false);
-        }
-      })();
-    });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
-      if (error.message.toLowerCase().includes("email not confirmed")) {
-        throw new Error("Lütfen önce e-posta adresinizi doğrulayın.");
-      }
-      throw new Error(error.message);
-    }
-
-    const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
-
-    const appUser = await mapSupabaseUserToAppUser(authUser);
-    setUser(appUser);
-  };
-
-  const register = async (data: {
-    email: string;
-    password: string;
-    name: string;
-    phone?: string;
-  }) => {
-    const { error } = await supabase.auth.signUp({
-      email: data.email,
-      password: data.password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/login`,
-        data: {
-          full_name: data.name,
-          phone: data.phone || null,
-        },
-      },
-    });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-  };
-
-  const logout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw new Error(error.message);
-    setUser(null);
-  };
-
-  const updateProfile = async (data: Partial<User>) => {
-    if (!user) return;
-
-    const payload = {
-      id: user.id,
-      full_name: data.name ?? user.name,
-      phone: data.phone ?? user.phone ?? null,
-      address: data.address ?? user.address ?? null,
-    };
-
-    const { error } = await supabase.from("profiles").upsert(payload);
-    if (error) throw new Error(error.message);
-
-    setUser({
-      ...user,
-      name: payload.full_name,
-      phone: payload.phone || "",
-      address: payload.address || "",
-    });
-  };
+const Navbar = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const { user, adminRole, adminRoleLoading } = useAuth();
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, updateProfile }}>
-      {children}
-    </AuthContext.Provider>
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-2">
+          <Milk className="h-8 w-8 text-primary" />
+          <span
+            className="text-xl font-bold font-heading text-foreground"
+            style={{ fontFamily: "var(--font-heading)" }}
+          >
+            Sade Süt
+          </span>
+        </Link>
+
+        <div className="hidden md:flex items-center gap-6">
+          <Link
+            to="/"
+            className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Ana Sayfa
+          </Link>
+
+          <Link
+            to="/order"
+            className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Sipariş Ver
+          </Link>
+
+          {!adminRoleLoading && adminRole && (
+            <Link
+              to="/admin"
+              className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+            >
+              Yönetim Paneli
+            </Link>
+          )}
+
+          {!adminRoleLoading && adminRole && (
+            <Link
+              to="/dispatch"
+              className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+            >
+              Dağıtım
+            </Link>
+          )}
+
+          {user ? (
+            <Link
+              to="/member"
+              className="text-sm font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1"
+            >
+              <User className="h-4 w-4" /> {(user.name || "Üye").split(" ")[0]}
+            </Link>
+          ) : (
+            <Link
+              to="/login"
+              className="text-sm font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1"
+            >
+              <LogIn className="h-4 w-4" /> Giriş Yap
+            </Link>
+          )}
+
+          <Link to="/order">
+            <Button variant="default" size="sm">
+              Süt Rezerve Et
+            </Button>
+          </Link>
+        </div>
+
+        <button
+          className="md:hidden text-foreground"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="md:hidden bg-background border-b border-border px-4 pb-4 space-y-3">
+          <Link
+            to="/"
+            onClick={() => setIsOpen(false)}
+            className="block text-sm font-medium text-foreground py-2"
+          >
+            Ana Sayfa
+          </Link>
+
+          <Link
+            to="/order"
+            onClick={() => setIsOpen(false)}
+            className="block text-sm font-medium text-foreground py-2"
+          >
+            Sipariş Ver
+          </Link>
+
+          {!adminRoleLoading && adminRole && (
+            <Link
+              to="/admin"
+              onClick={() => setIsOpen(false)}
+              className="block text-sm font-medium text-foreground py-2"
+            >
+              Yönetim Paneli
+            </Link>
+          )}
+
+          {!adminRoleLoading && adminRole && (
+            <Link
+              to="/dispatch"
+              onClick={() => setIsOpen(false)}
+              className="block text-sm font-medium text-foreground py-2"
+            >
+              Dağıtım
+            </Link>
+          )}
+
+          {user ? (
+            <Link
+              to="/member"
+              onClick={() => setIsOpen(false)}
+              className="block text-sm font-medium text-foreground py-2 flex items-center gap-1"
+            >
+              <User className="h-4 w-4" /> {(user.name || "Üye").split(" ")[0]}
+            </Link>
+          ) : (
+            <Link
+              to="/login"
+              onClick={() => setIsOpen(false)}
+              className="block text-sm font-medium text-foreground py-2 flex items-center gap-1"
+            >
+              <LogIn className="h-4 w-4" /> Giriş Yap
+            </Link>
+          )}
+
+          <Link to="/order" onClick={() => setIsOpen(false)}>
+            <Button variant="default" size="sm" className="w-full">
+              Süt Rezerve Et
+            </Button>
+          </Link>
+        </div>
+      )}
+    </nav>
   );
 };
+
+export default Navbar;
