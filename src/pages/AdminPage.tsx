@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isSameDay, addDays,} from "date-fns";
 import { tr } from "date-fns/locale";
 import {
   CalendarIcon,
@@ -448,6 +448,17 @@ const AdminPage = () => {
     })
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
+  const today = new Date();
+const tomorrow = addDays(new Date(), 1);
+
+const todaysOrders = orders.filter((o) =>
+  isSameDay(parseISO(o.delivery_date), today)
+);
+
+const tomorrowsOrders = orders.filter((o) =>
+  isSameDay(parseISO(o.delivery_date), tomorrow)
+);
+  
   const stats = {
     total: orders.length,
     pending: orders.filter((o) => o.status === "pending").length,
@@ -531,11 +542,11 @@ const AdminPage = () => {
           {/* İstatistikler */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {[
-              { label: "Toplam Sipariş", value: stats.total, color: "text-foreground" },
-              { label: "Beklemede", value: stats.pending, color: "text-yellow-600" },
-              { label: "Hazırlanan / Yolda", value: stats.delivering, color: "text-blue-600" },
-              { label: "Teslim Edildi", value: stats.delivered, color: "text-green-600" },
-            ].map((s) => (
+  { label: "Toplam Sipariş", value: stats.total, color: "text-foreground" },
+  { label: "Bugün Teslimat", value: todaysOrders.length, color: "text-primary" },
+  { label: "Beklemede", value: stats.pending, color: "text-yellow-600" },
+  { label: "Teslim Edildi", value: stats.delivered, color: "text-green-600" },
+].map((s) => (
               <div key={s.label} className="bg-card rounded-xl p-4 text-center" style={{ boxShadow: "var(--shadow-card)" }}>
                 <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
                 <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
@@ -591,6 +602,29 @@ const AdminPage = () => {
                 </PopoverContent>
               </Popover>
 
+              <Button
+  variant="outline"
+  size="sm"
+  onClick={() => {
+    setDateFrom(startOfDay(new Date()));
+    setDateTo(endOfDay(new Date()));
+  }}
+>
+  Bugün
+</Button>
+
+<Button
+  variant="outline"
+  size="sm"
+  onClick={() => {
+    const nextDay = addDays(new Date(), 1);
+    setDateFrom(startOfDay(nextDay));
+    setDateTo(endOfDay(nextDay));
+  }}
+>
+  Yarın
+</Button>
+              
               {(dateFrom || dateTo) && (
                 <Button
                   variant="ghost"
