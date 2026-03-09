@@ -281,7 +281,7 @@ export default function CustomerManagementPage() {
                 </div>
             </div>
 
-            <
+            <CustomerDetailDrawer
                 open={drawerOpen}
                 onClose={() => setDrawerOpen(false)}
                 customer={selectedCustomer}
