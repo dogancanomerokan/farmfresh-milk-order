@@ -18,14 +18,11 @@ import {
   XCircle,
   Filter,
   RefreshCw,
-  Download,
-  LogOut,
+   LogOut,
   ShieldAlert,
   Trash2,
-  Users,
   Hand,
-  MapPinned,
-} from "lucide-react";
+  } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -184,23 +181,13 @@ const statusConfig: Record<
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `siparisler_${format(new Date(), "yyyy-MM-dd")}.csv`;
+  a. = `siparisler_${format(new Date(), "yyyy-MM-dd")}.csv`;
   a.click();
   URL.revokeObjectURL(url);
   toast.success("CSV dosyası indirildi");
 };
 
-const AdminPage = () => {
- const handleOpenBulkRoute = () => {
-  const url = buildGoogleMapsDirectionsUrl(myRouteOrders);
-   
-  if (!url) {
-    toast.error("Rota için uygun aktif sipariş bulunamadı.");
-    return;
-  }
-
-  window.open(url, "_blank", "noopener,noreferrer");
-};
+const DispatchPage = () => {
   
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
@@ -213,29 +200,13 @@ const AdminPage = () => {
   const [dateFrom, setDateFrom] = useState<Date>();
   const [dateTo, setDateTo] = useState<Date>();
 
-  const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([]);
-  const [adminsLoading, setAdminsLoading] = useState(false);
-
-  const [newAdminEmail, setNewAdminEmail] = useState("");
-  const [newAdminName, setNewAdminName] = useState("");
-  const [newAdminRole, setNewAdminRole] =
-    useState<AdminRole>("operations_admin");
-  const [creatingAdmin, setCreatingAdmin] = useState(false);
-
-  const getAdminNameById = (adminId: string | null) => {
+    const getAdminNameById = (adminId: string | null) => {
     if (!adminId) return "—";
     const found = adminUsers.find((a) => a.id === adminId);
     return found?.full_name || found?.email || "Bilinmiyor";
   };
 
-  const getFullAddress = (order: AdminOrder) => {
-    return [order.address, order.mahalle, order.ilce, order.il, "Türkiye"]
-      .filter(Boolean)
-      .join(", ");
-  };
-
-
-  const canEditOrder = (order: AdminOrder) => {
+    const canEditOrder = (order: AdminOrder) => {
     if (!adminUser) return false;
     if (adminUser.role === "super_admin") return true;
     if (!order.claimed_by_admin_id) return true;
@@ -337,12 +308,6 @@ const AdminPage = () => {
 
     checkAdminAccess();
   }, []);
-
-  useEffect(() => {
-    if (authorized && adminUser) {
-      loadAdminUsers();
-    }
-  }, [authorized, adminUser?.id]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -560,6 +525,16 @@ const myRouteOrders = orders.filter(
     ACTIVE_ORDER_STATUSES.includes(order.status as any) &&
     order.address
 );
+  const handleOpenBulkRoute = () => {
+  const url = buildGoogleMapsDirectionsUrl(myRouteOrders);
+
+  if (!url) {
+    toast.error("Rota için uygun sipariş bulunamadı.");
+    return;
+  }
+
+  window.open(url, "_blank", "noopener,noreferrer");
+};
   
   const today = new Date();
   const tomorrow = addDays(new Date(), 1);
@@ -647,8 +622,11 @@ const myRouteOrders = orders.filter(
                 className="text-3xl md:text-4xl font-bold text-foreground"
                 style={{ fontFamily: "var(--font-heading)" }}
               >
-                Sipariş Paneli
+                Dağıtım Paneli
               </h1>
+              <p className="text-sm text-muted-foreground mt-2">
+  Üzerinize aldığınız siparişleri yönetin, navigasyon başlatın ve teslimat durumunu güncelleyin.
+</p>
               <p className="text-sm text-muted-foreground mt-2">
                 Giriş yapan yetkili:{" "}
                 <span className="font-medium">
@@ -761,122 +739,7 @@ const myRouteOrders = orders.filter(
             </div>
           </div>
 
-          <div
-            className="bg-card rounded-xl p-4 mb-6 flex flex-col sm:flex-row gap-3 items-start sm:items-end"
-            style={{ boxShadow: "var(--shadow-card)" }}
-          >
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Filter className="h-4 w-4" /> Filtrele:
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tüm Durumlar</SelectItem>
-                  {Object.entries(statusConfig).map(([key, cfg]) => (
-                    <SelectItem key={key} value={key}>
-                      {cfg.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "text-sm",
-                      !dateFrom && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="h-4 w-4 mr-1" />
-                    {dateFrom
-                      ? format(dateFrom, "d MMM", { locale: tr })
-                      : "Başlangıç"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dateFrom}
-                    onSelect={setDateFrom}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "text-sm",
-                      !dateTo && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="h-4 w-4 mr-1" />
-                    {dateTo
-                      ? format(dateTo, "d MMM", { locale: tr })
-                      : "Bitiş"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dateTo}
-                    onSelect={setDateTo}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setDateFrom(startOfDay(new Date()));
-                  setDateTo(endOfDay(new Date()));
-                }}
-              >
-                Bugün
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const nextDay = addDays(new Date(), 1);
-                  setDateFrom(startOfDay(nextDay));
-                  setDateTo(endOfDay(nextDay));
-                }}
-              >
-                Yarın
-              </Button>
-
-              {(dateFrom || dateTo) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setDateFrom(undefined);
-                    setDateTo(undefined);
-                  }}
-                >
-                  Temizle
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <div
+                   <div
             className="mb-8 bg-card rounded-xl p-5 md:p-6"
             style={{ boxShadow: "var(--shadow-card)" }}
           >
@@ -929,17 +792,17 @@ const myRouteOrders = orders.filter(
             )}
           </div>
 
-          {filtered.length === 0 ? (
+          {claimedOrders.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground">
               <Package className="h-12 w-12 mx-auto mb-4 opacity-40" />
-              <p className="text-lg font-medium">Sipariş bulunamadı</p>
-              <p className="text-sm mt-1">
-                Henüz sipariş yok veya filtreleri değiştirin.
-              </p>
+              <p className="text-lg font-medium">Üzerinizde sipariş yok</p>
+<p className="text-sm mt-1">
+  Dağıtım için önce bir siparişi üzerinize alın.
+</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {filtered.map((order) => {
+              {claimedOrders.map((order) => {
                 const cfg = statusConfig[order.status];
                 const StatusIcon = cfg.icon;
 
@@ -1090,8 +953,33 @@ const myRouteOrders = orders.filter(
                           >
                             Siparişi Bırak
                           </Button>
+                    
+                    <Button
+  variant="outline"
+  size="sm"
+  onClick={() => {
+    const address = [
+      order.address,
+      order.mahalle,
+      order.ilce,
+      order.il,
+      "Türkiye",
+    ]
+      .filter(Boolean)
+      .join(", ");
+
+    const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+      address
+    )}&travelmode=driving`;
+
+    window.open(navUrl, "_blank", "noopener,noreferrer");
+  }}
+>
+  Navigasyon
+</Button>
                         )}
 
+                        
                         <Select
                           value={order.status}
                           onValueChange={(v) =>
@@ -1111,17 +999,7 @@ const myRouteOrders = orders.filter(
                           </SelectContent>
                         </Select>
 
-                        {adminUser.role === "super_admin" && (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => deleteOrder(order.id)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Siparişi Sil
-                          </Button>
-                        )}
-                      </div>
+                                             </div>
                     </div>
                   </div>
                 );
@@ -1129,95 +1007,11 @@ const myRouteOrders = orders.filter(
             </div>
           )}
 
-          {adminUser.role === "super_admin" && (
-            <div
-              className="mt-10 bg-card rounded-xl p-5 md:p-6"
-              style={{ boxShadow: "var(--shadow-card)" }}
-            >
-              <div className="mb-6 flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                <div>
-                  <h2
-                    className="text-2xl font-bold text-foreground"
-                    style={{ fontFamily: "var(--font-heading)" }}
-                  >
-                    Admin Kullanıcı Yönetimi
-                  </h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Yeni admin ekleyin, rollerini değiştirin veya pasife alın.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-4 gap-3 mb-6">
-                <Input
-                  placeholder="E-posta"
-                  value={newAdminEmail}
-                  onChange={(e) => setNewAdminEmail(e.target.value)}
-                />
-                <Input
-                  placeholder="Ad Soyad"
-                  value={newAdminName}
-                  onChange={(e) => setNewAdminName(e.target.value)}
-                />
-                <Select
-                  value={newAdminRole}
-                  onValueChange={(v) => setNewAdminRole(v as AdminRole)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="operations_admin">
-                      Operations Admin
-                    </SelectItem>
-                    <SelectItem value="super_admin">Super Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-                            </div>
-
-              <div className="space-y-3">
-                {adminsLoading ? (
-                  <p className="text-sm text-muted-foreground">
-                    Admin kullanıcılar yükleniyor...
-                  </p>
-                ) : adminUsers.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Henüz admin kullanıcı bulunmuyor.
-                  </p>
-                ) : (
-                  adminUsers.map((admin) => (
-                    <div
-                      key={admin.id}
-                      className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border border-border rounded-lg p-4"
-                    >
-                      <div>
-                        <p className="font-semibold text-foreground">
-                          {admin.full_name || "İsimsiz Admin"}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {admin.email}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Oluşturulma:{" "}
-                          {format(
-                            parseISO(admin.created_at),
-                            "d MMM yyyy HH:mm",
-                            { locale: tr }
-                          )}
-                        </p>
                       </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-             </div>
       </div>
       <Footer />
     </div>
   );
 };
 
-export default AdminPage;
+export default DispatchPage;
