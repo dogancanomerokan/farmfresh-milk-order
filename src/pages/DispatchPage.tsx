@@ -44,6 +44,7 @@ import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabaseClient";
+import { MapPinned } from "lucide-react";
 import {
   ACTIVE_ORDER_STATUSES,
   buildGoogleMapsDirectionsUrl,
@@ -144,8 +145,7 @@ const statusConfig: Record<
   },
 };
 
-  const rows = orders.map((o) => {
-    const productsText = o.items
+      const productsText = o.items
       .map((item) => {
         const total = Number(item.line_total || 0);
         return `${item.product_name_snapshot} ${item.volume_snapshot || ""} ${
@@ -175,10 +175,6 @@ const statusConfig: Record<
     ].join(",");
   });
 
-  const bom = "\uFEFF";
-  const csv = bom + [headers.join(","), ...rows].join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
  
 const DispatchPage = () => {
 
@@ -199,11 +195,11 @@ const DispatchPage = () => {
   const [dateFrom, setDateFrom] = useState<Date>();
   const [dateTo, setDateTo] = useState<Date>();
 
-    const getAdminNameById = (adminId: string | null) => {
-    if (!adminId) return "—";
-    const found = adminUsers.find((a) => a.id === adminId);
-    return found?.full_name || found?.email || "Bilinmiyor";
-  };
+const getAdminNameById = (adminId: string | null) => {
+  if (!adminId) return "—";
+  if (adminUser?.id === adminId) return adminUser.full_name || adminUser.email;
+  return "Admin";
+};
 
     const canEditOrder = (order: AdminOrder) => {
     if (!adminUser) return false;
