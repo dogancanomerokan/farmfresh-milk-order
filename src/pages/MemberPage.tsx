@@ -75,8 +75,8 @@ const MemberPage = () => {
     address: "",
   });
 
-  const loadMemberData = async () => {
-    setLoading(true);
+  const loadMemberData = async (showLoader = false) => {
+    if (showLoader) setLoading(true);
 
     try {
       const {
@@ -159,20 +159,19 @@ const MemberPage = () => {
       setOrders(mergedOrders);
     } catch (error: any) {
       console.error("Member page load error:", error);
-      toast.error(error.message || "Üye bilgileri yüklenemedi");
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadMemberData();
+    loadMemberData(true);
   }, [navigate]);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      loadMemberData();
-    }, 5000);
+      loadMemberData(false);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [navigate]);
