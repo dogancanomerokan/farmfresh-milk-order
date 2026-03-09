@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ElementType } from "react";
 import {
   format,
   parseISO,
@@ -110,7 +110,7 @@ type AdminOrder = OrderRow & {
 
 const statusConfig: Record<
   OrderStatus,
-  { label: string; icon: React.ElementType; color: string }
+  { label: string; icon: ElementType; color: string }
 > = {
   pending: {
     label: "Beklemede",
@@ -236,22 +236,13 @@ const AdminPage = () => {
   };
 
   const getFullAddress = (order: AdminOrder) => {
-  return [order.address, order.mahalle, order.ilce, order.il, "Türkiye"]
-    .filter(Boolean)
-    .join(", ");
-};
+    return [order.address, order.mahalle, order.ilce, order.il, "Türkiye"]
+      .filter(Boolean)
+      .join(", ");
+  };
 
-const openAddressInMap = (order: AdminOrder) => {
-  const fullAddress = getFullAddress(order);
-
-  if (!fullAddress.trim()) {
-    toast.error("Adres bulunamadı");
-    return;
-  }
-
-  const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`;
-  window.open(mapUrl, "_blank", "noopener,noreferrer");
-};
+  const openAddressInMap = (order: AdminOrder) => {
+    const fullAddress = getFullAddress(order);
 
     if (!fullAddress.trim()) {
       toast.error("Adres bulunamadı");
@@ -694,10 +685,6 @@ const openAddressInMap = (order: AdminOrder) => {
 
   const todaysOrders = orders.filter((o) =>
     isSameDay(parseISO(o.delivery_date), today)
-  );
-
-  const tomorrowsOrders = orders.filter((o) =>
-    isSameDay(parseISO(o.delivery_date), tomorrow)
   );
 
   const myDeliveredOrders = adminUser
@@ -1370,6 +1357,7 @@ const openAddressInMap = (order: AdminOrder) => {
       </div>
       <Footer />
     </div>
+  );
 };
 
 export default AdminPage;
