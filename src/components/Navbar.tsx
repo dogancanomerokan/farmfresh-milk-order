@@ -76,14 +76,14 @@ const Navbar = () => {
             Sipariş Ver
           </Link>
 
-          {adminRole === "super_admin" && (
-            <Link
-              to="/admin"
-              className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-            >
-              Yönetim Paneli
-            </Link>
-          )}
+          {adminRole && (
+  <Link
+    to="/admin"
+    className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+  >
+    Yönetim Paneli
+  </Link>
+)}
 
           {adminRole && (
             <Link
@@ -145,15 +145,15 @@ const Navbar = () => {
             Sipariş Ver
           </Link>
 
-          {adminRole === "super_admin" && (
-            <Link
-              to="/admin"
-              onClick={() => setIsOpen(false)}
-              className="block text-sm font-medium text-foreground py-2"
-            >
-              Yönetim Paneli
-            </Link>
-          )}
+          {adminRole && (
+  <Link
+    to="/admin"
+    onClick={() => setIsOpen(false)}
+    className="block text-sm font-medium text-foreground py-2"
+  >
+    Yönetim Paneli
+  </Link>
+)}
 
           {adminRole && (
             <Link
