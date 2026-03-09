@@ -10,48 +10,48 @@ type AdminRole = "operations_admin" | "super_admin" | null;
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [adminRole, setAdminRole] = useState<AdminRole>(null);
+  const [adminRoleLoading, setAdminRoleLoading] = useState(true);
   const { user } = useAuth();
 
   useEffect(() => {
-  const [adminRoleLoading, setAdminRoleLoading] = useState(true);
-  const loadAdminRole = async () => {
-    try {
-      setAdminRoleLoading(true);
+    const loadAdminRole = async () => {
+      try {
+        setAdminRoleLoading(true);
 
-      const {
-        data: { user: authUser },
-      } = await supabase.auth.getUser();
+        const {
+          data: { user: authUser },
+        } = await supabase.auth.getUser();
 
-      if (!authUser) {
+        if (!authUser) {
+          setAdminRole(null);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("admin_users")
+          .select("role")
+          .eq("auth_user_id", authUser.id)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Admin rolü alınamadı:", error);
+          setAdminRole(null);
+          return;
+        }
+
+        setAdminRole((data?.role as AdminRole) ?? null);
+      } catch (error) {
+        console.error("Navbar admin rolü hatası:", error);
         setAdminRole(null);
-        return;
+      } finally {
+        setAdminRoleLoading(false);
       }
+    };
 
-      const { data, error } = await supabase
-        .from("admin_users")
-        .select("role")
-        .eq("auth_user_id", authUser.id)
-        .eq("is_active", true)
-        .maybeSingle();
+    loadAdminRole();
+  }, [user]);
 
-      if (error) {
-        console.error("Admin rolü alınamadı:", error);
-        setAdminRole(null);
-        return;
-      }
-
-      setAdminRole((data?.role as AdminRole) ?? null);
-    } catch (error) {
-      console.error("Navbar admin rolü hatası:", error);
-      setAdminRole(null);
-    } finally {
-      setAdminRoleLoading(false);
-    }
-  };
-
-  loadAdminRole();
-}, [user]);
-  
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
@@ -65,7 +65,6 @@ const Navbar = () => {
           </span>
         </Link>
 
-        {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-6">
           <Link
             to="/"
@@ -81,23 +80,23 @@ const Navbar = () => {
             Sipariş Ver
           </Link>
 
-         {!adminRoleLoading && adminRole && (
-  <Link
-    to="/admin"
-    className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-  >
-    Yönetim Paneli
-  </Link>
-)}
+          {!adminRoleLoading && adminRole && (
+            <Link
+              to="/admin"
+              className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+            >
+              Yönetim Paneli
+            </Link>
+          )}
 
-{!adminRoleLoading && adminRole && (
-  <Link
-    to="/dispatch"
-    className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-  >
-    Dağıtım
-  </Link>
-)}
+          {!adminRoleLoading && adminRole && (
+            <Link
+              to="/dispatch"
+              className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+            >
+              Dağıtım
+            </Link>
+          )}
 
           {user ? (
             <Link
@@ -122,7 +121,6 @@ const Navbar = () => {
           </Link>
         </div>
 
-        {/* Mobile toggle */}
         <button
           className="md:hidden text-foreground"
           onClick={() => setIsOpen(!isOpen)}
@@ -131,7 +129,6 @@ const Navbar = () => {
         </button>
       </div>
 
-      {/* Mobile menu */}
       {isOpen && (
         <div className="md:hidden bg-background border-b border-border px-4 pb-4 space-y-3">
           <Link
@@ -151,24 +148,24 @@ const Navbar = () => {
           </Link>
 
           {!adminRoleLoading && adminRole && (
-  <Link
-    to="/admin"
-    onClick={() => setIsOpen(false)}
-    className="block text-sm font-medium text-foreground py-2"
-  >
-    Yönetim Paneli
-  </Link>
-)}
+            <Link
+              to="/admin"
+              onClick={() => setIsOpen(false)}
+              className="block text-sm font-medium text-foreground py-2"
+            >
+              Yönetim Paneli
+            </Link>
+          )}
 
-{!adminRoleLoading && adminRole && (
-  <Link
-    to="/dispatch"
-    onClick={() => setIsOpen(false)}
-    className="block text-sm font-medium text-foreground py-2"
-  >
-    Dağıtım
-  </Link>
-)}
+          {!adminRoleLoading && adminRole && (
+            <Link
+              to="/dispatch"
+              onClick={() => setIsOpen(false)}
+              className="block text-sm font-medium text-foreground py-2"
+            >
+              Dağıtım
+            </Link>
+          )}
 
           {user ? (
             <Link
