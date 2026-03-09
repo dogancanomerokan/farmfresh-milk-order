@@ -969,10 +969,7 @@ const myRouteOrders = orders.filter(
   }}
 >
   Navigasyon
-</Button>
-                        )}
-
-                        
+</Button>                     
                         <Select
                           value={order.status}
                           onValueChange={(v) =>
