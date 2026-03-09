@@ -181,6 +181,15 @@ const statusConfig: Record<
   const url = URL.createObjectURL(blob);
  
 const DispatchPage = () => {
+
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+
+  const myRouteOrders = orders.filter(
+    (order) =>
+      order.claimed_by_admin_id === adminUser?.id &&
+      ACTIVE_ORDER_STATUSES.includes(order.status as any) &&
+      order.address
+  );
   
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
@@ -502,17 +511,7 @@ const DispatchPage = () => {
       (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
-
-  const DispatchPage = () => {
-  const [orders, setOrders] = useState<AdminOrder[]>([]);
-
-  const myRouteOrders = orders.filter(
-    (order) =>
-      order.claimed_by_admin_id === adminUser?.id &&
-      ACTIVE_ORDER_STATUSES.includes(order.status as any) &&
-      order.address
-  );
-    
+ 
   const stats = {
     total: orders.length,
     pending: orders.filter((o) => o.status === "pending").length,
