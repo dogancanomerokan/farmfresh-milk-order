@@ -121,7 +121,7 @@ export default function CustomerDetailDrawer({
 
         try {
             await cancelCustomerOrder(selectedOrderId, adminId, cancelReason);
-            toast.success("Sipariş iptal edildi. Mail gönderimini sonraki adımda bağlayacağız.");
+            toast.success("Sipariş iptal edildi. Mail gönderildi.");
             await onUpdated();
             await loadOrders();
             setCancelReason("");
