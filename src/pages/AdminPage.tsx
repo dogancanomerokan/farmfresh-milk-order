@@ -1370,7 +1370,6 @@ const openAddressInMap = (order: AdminOrder) => {
       </div>
       <Footer />
     </div>
-  );
 };
 
 export default AdminPage;
