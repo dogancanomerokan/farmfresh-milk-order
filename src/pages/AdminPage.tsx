@@ -639,7 +639,37 @@ const tomorrowsOrders = orders.filter((o) =>
               )}
             </div>
           </div>
+<div className="mb-8 bg-card rounded-xl p-5 md:p-6" style={{ boxShadow: "var(--shadow-card)" }}>
+  <h2 className="text-xl font-bold text-foreground mb-4" style={{ fontFamily: "var(--font-heading)" }}>
+    Bugün Teslim Edilecek Siparişler
+  </h2>
 
+  {todaysOrders.length === 0 ? (
+    <p className="text-sm text-muted-foreground">Bugün için planlanan teslimat yok.</p>
+  ) : (
+    <div className="space-y-3">
+      {todaysOrders.map((order) => (
+        <div
+          key={order.id}
+          className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border border-border rounded-lg p-4"
+        >
+          <div>
+            <p className="font-semibold text-foreground">{order.guest_name || "Misafir Siparişi"}</p>
+            <p className="text-sm text-muted-foreground">
+              {order.time_slot} · {order.il} / {order.ilce}
+              {order.mahalle ? ` / ${order.mahalle}` : ""}
+            </p>
+            <p className="text-sm text-muted-foreground">{order.address}</p>
+          </div>
+
+          <Badge variant="outline" className={cn("text-xs border", statusConfig[order.status].color)}>
+            {statusConfig[order.status].label}
+          </Badge>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
           {/* Sipariş listesi */}
           {filtered.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground">
