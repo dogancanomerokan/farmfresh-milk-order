@@ -214,8 +214,8 @@ const exportToCSV = (orders: AdminOrder[]) => {
 
 const AdminPage = () => {
  const handleOpenBulkRoute = () => {
-  const url = buildGoogleMapsDirectionsUrl(activeOrdersForRoute);
-
+  const url = buildGoogleMapsDirectionsUrl(myRouteOrders);
+   
   if (!url) {
     toast.error("Rota için uygun aktif sipariş bulunamadı.");
     return;
@@ -695,8 +695,9 @@ const AdminPage = () => {
     delivered: orders.filter((o) => o.status === "delivered").length,
   };
   
-const activeOrdersForRoute = orders.filter(
+const myRouteOrders = orders.filter(
   (order) =>
+    order.claimed_by_admin_id === adminUser?.id &&
     ACTIVE_ORDER_STATUSES.includes(order.status as any) &&
     order.address
 );
@@ -808,10 +809,10 @@ const activeOrdersForRoute = orders.filter(
   variant="default"
   size="sm"
   onClick={handleOpenBulkRoute}
-  disabled={activeOrdersForRoute.length === 0}
+  disabled={myRouteOrders.length === 0}
 >
   <MapPinned className="h-4 w-4 mr-2" />
-  Toplu Rota Aç
+  Benim Rotam
 </Button>
               <Button
                 variant="outline"
