@@ -52,6 +52,12 @@ const Navbar = () => {
           <Link to="/" onClick={() => setIsOpen(false)} className="block text-sm font-medium text-foreground py-2">
             Ana Sayfa
           </Link>
+           <Link to="/dispatch" className="text-sm font-medium">
+            Yönetim Paneli
+          </Link>
+          <Link to="/dispatch" className="text-sm font-medium">
+            Dağıtım
+          </Link>
           <Link to="/order" onClick={() => setIsOpen(false)} className="block text-sm font-medium text-foreground py-2">
             Sipariş Ver
           </Link>
