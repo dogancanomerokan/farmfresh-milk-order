@@ -48,6 +48,10 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import DeliveryZoneManager from "@/components/DeliveryZoneManager";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  ACTIVE_ORDER_STATUSES,
+  buildGoogleMapsDirectionsUrl,
+} from "@/lib/routes";
 
 type OrderStatus =
   | "pending"
@@ -106,6 +110,23 @@ type OrderItemRow = {
 
 type AdminOrder = OrderRow & {
   items: OrderItemRow[];
+};
+
+const activeOrdersForRoute = orders.filter(
+  (order) =>
+    ACTIVE_ORDER_STATUSES.includes(order.status as any) &&
+    order.address
+);
+
+const handleOpenBulkRoute = () => {
+  const url = buildGoogleMapsDirectionsUrl(activeOrdersForRoute);
+
+  if (!url) {
+    toast.error("Rota için uygun aktif sipariş bulunamadı.");
+    return;
+  }
+
+  window.open(url, "_blank", "noopener,noreferrer");
 };
 
 const statusConfig: Record<
