@@ -1,5 +1,6 @@
 export const ACTIVE_ORDER_STATUSES = [
-   "approved",
+  "pending",
+  "approved",
   "preparing",
   "delivering",
 ];
