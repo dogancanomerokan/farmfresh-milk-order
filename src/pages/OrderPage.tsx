@@ -25,11 +25,6 @@ const { data: freezeRow } = await supabase
   .eq("user_id", user.id)
   .maybeSingle();
 
-if (freezeRow?.is_frozen) {
-  toast.error("Hesabınız geçici olarak işlem yapmaya kapatılmıştır.");
-  return;
-}
-
 const timeSlots = [
   "08:00 - 10:00",
   "10:00 - 12:00",
@@ -189,6 +184,12 @@ const OrderPage = () => {
     if (!selectedProduct) {
       toast.error("Lütfen bir ürün seçin");
       return;
+
+      if (freezeRow?.is_frozen) {
+  toast.error("Hesabınız geçici olarak işlem yapmaya kapatılmıştır.");
+  return;
+}
+      
     }
 
     setSubmitting(true);
