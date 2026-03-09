@@ -13,40 +13,45 @@ const Navbar = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    const loadAdminRole = async () => {
-      try {
-        const {
-          data: { user: authUser },
-        } = await supabase.auth.getUser();
+  const [adminRoleLoading, setAdminRoleLoading] = useState(true);
+  const loadAdminRole = async () => {
+    try {
+      setAdminRoleLoading(true);
 
-        if (!authUser) {
-          setAdminRole(null);
-          return;
-        }
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
 
-        const { data, error } = await supabase
-          .from("admin_users")
-          .select("role")
-          .eq("auth_user_id", authUser.id)
-          .eq("is_active", true)
-          .maybeSingle();
-
-        if (error) {
-          console.error("Admin rolü alınamadı:", error);
-          setAdminRole(null);
-          return;
-        }
-
-        setAdminRole((data?.role as AdminRole) ?? null);
-      } catch (error) {
-        console.error("Navbar admin rolü hatası:", error);
+      if (!authUser) {
         setAdminRole(null);
+        return;
       }
-    };
 
-    loadAdminRole();
-  }, [user]);
+      const { data, error } = await supabase
+        .from("admin_users")
+        .select("role")
+        .eq("auth_user_id", authUser.id)
+        .eq("is_active", true)
+        .maybeSingle();
 
+      if (error) {
+        console.error("Admin rolü alınamadı:", error);
+        setAdminRole(null);
+        return;
+      }
+
+      setAdminRole((data?.role as AdminRole) ?? null);
+    } catch (error) {
+      console.error("Navbar admin rolü hatası:", error);
+      setAdminRole(null);
+    } finally {
+      setAdminRoleLoading(false);
+    }
+  };
+
+  loadAdminRole();
+}, [user]);
+  
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
@@ -76,7 +81,7 @@ const Navbar = () => {
             Sipariş Ver
           </Link>
 
-          {adminRole && (
+         {!adminRoleLoading && adminRole && (
   <Link
     to="/admin"
     className="text-sm font-medium text-foreground hover:text-primary transition-colors"
@@ -85,14 +90,14 @@ const Navbar = () => {
   </Link>
 )}
 
-          {adminRole && (
-            <Link
-              to="/dispatch"
-              className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-            >
-              Dağıtım
-            </Link>
-          )}
+{!adminRoleLoading && adminRole && (
+  <Link
+    to="/dispatch"
+    className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+  >
+    Dağıtım
+  </Link>
+)}
 
           {user ? (
             <Link
@@ -145,7 +150,7 @@ const Navbar = () => {
             Sipariş Ver
           </Link>
 
-          {adminRole && (
+          {!adminRoleLoading && adminRole && (
   <Link
     to="/admin"
     onClick={() => setIsOpen(false)}
@@ -155,15 +160,15 @@ const Navbar = () => {
   </Link>
 )}
 
-          {adminRole && (
-            <Link
-              to="/dispatch"
-              onClick={() => setIsOpen(false)}
-              className="block text-sm font-medium text-foreground py-2"
-            >
-              Dağıtım
-            </Link>
-          )}
+{!adminRoleLoading && adminRole && (
+  <Link
+    to="/dispatch"
+    onClick={() => setIsOpen(false)}
+    className="block text-sm font-medium text-foreground py-2"
+  >
+    Dağıtım
+  </Link>
+)}
 
           {user ? (
             <Link
