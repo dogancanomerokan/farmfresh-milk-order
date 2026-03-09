@@ -46,7 +46,6 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import DeliveryZoneManager from "@/components/DeliveryZoneManager";
 import { supabase } from "@/lib/supabaseClient";
 import {
   ACTIVE_ORDER_STATUSES,
@@ -148,27 +147,6 @@ const statusConfig: Record<
   },
 };
 
-const exportToCSV = (orders: AdminOrder[]) => {
-  const headers = [
-    "Sipariş ID",
-    "Ad Soyad",
-    "E-posta",
-    "Telefon",
-    "İl",
-    "İlçe",
-    "Mahalle",
-    "Adres",
-    "Ürünler",
-    "Toplam",
-    "Teslimat Tarihi",
-    "Teslimat Saati",
-    "Durum",
-    "Siparişi Alan",
-    "Teslim Eden",
-    "Notlar",
-    "Oluşturulma",
-  ];
-
   const rows = orders.map((o) => {
     const productsText = o.items
       .map((item) => {
@@ -256,20 +234,6 @@ const AdminPage = () => {
       .join(", ");
   };
 
-  const openAddressInMap = (order: AdminOrder) => {
-    const fullAddress = getFullAddress(order);
-
-    if (!fullAddress.trim()) {
-      toast.error("Adres bulunamadı");
-      return;
-    }
-
-    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-      fullAddress
-    )}`;
-
-    window.open(mapUrl, "_blank", "noopener,noreferrer");
-  };
 
   const canEditOrder = (order: AdminOrder) => {
     if (!adminUser) return false;
@@ -318,27 +282,7 @@ const AdminPage = () => {
     }
   };
 
-  const loadAdminUsers = async () => {
-    setAdminsLoading(true);
-
-    try {
-      const { data, error } = await supabase
-        .from("admin_users")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      setAdminUsers(data || []);
-    } catch (error: any) {
-      console.error("Admin kullanıcılar alınamadı:", error);
-      toast.error(error.message || "Admin kullanıcılar yüklenemedi");
-    } finally {
-      setAdminsLoading(false);
-    }
-  };
-
-  useEffect(() => {
+    useEffect(() => {
     const checkAdminAccess = async () => {
       setLoading(true);
 
@@ -581,92 +525,7 @@ const AdminPage = () => {
     }
   };
 
-  const createAdminUser = async () => {
-    if (adminUser?.role !== "super_admin") {
-      toast.error("Bu işlem için yetkiniz yok");
-      return;
-    }
-
-    if (!newAdminEmail.trim()) {
-      toast.error("E-posta adresi gerekli");
-      return;
-    }
-
-    setCreatingAdmin(true);
-
-    try {
-      const { error } = await supabase.rpc("add_admin_user_by_email", {
-        target_email: newAdminEmail.trim().toLowerCase(),
-        target_full_name: newAdminName.trim(),
-        target_role: newAdminRole,
-      });
-
-      if (error) throw error;
-
-      toast.success("Admin kullanıcı eklendi");
-      setNewAdminEmail("");
-      setNewAdminName("");
-      setNewAdminRole("operations_admin");
-      await loadAdminUsers();
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error.message || "Admin kullanıcı eklenemedi");
-    } finally {
-      setCreatingAdmin(false);
-    }
-  };
-
-  const updateAdminRole = async (id: string, role: AdminRole) => {
-    if (adminUser?.role !== "super_admin") {
-      toast.error("Bu işlem için yetkiniz yok");
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from("admin_users")
-        .update({ role })
-        .eq("id", id);
-
-      if (error) throw error;
-
-      setAdminUsers((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, role } : u))
-      );
-
-      toast.success("Admin rolü güncellendi");
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error.message || "Rol güncellenemedi");
-    }
-  };
-
-  const toggleAdminActive = async (id: string, isActive: boolean) => {
-    if (adminUser?.role !== "super_admin") {
-      toast.error("Bu işlem için yetkiniz yok");
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from("admin_users")
-        .update({ is_active: !isActive })
-        .eq("id", id);
-
-      if (error) throw error;
-
-      setAdminUsers((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, is_active: !isActive } : u))
-      );
-
-      toast.success("Admin durumu güncellendi");
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error.message || "Durum güncellenemedi");
-    }
-  };
-
-  const filtered = orders
+      const filtered = orders
     .filter((o) => statusFilter === "all" || o.status === statusFilter)
     .filter((o) => {
       if (!dateFrom && !dateTo) return true;
@@ -824,15 +683,7 @@ const myRouteOrders = orders.filter(
                 {ordersLoading ? "Yükleniyor..." : "Yenile"}
               </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => exportToCSV(filtered)}
-              >
-                <Download className="h-4 w-4 mr-2" /> CSV İndir
-              </Button>
-
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                           <Button variant="ghost" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" /> Çıkış
               </Button>
             </div>
@@ -1155,17 +1006,6 @@ const myRouteOrders = orders.filter(
                             </p>
 
                             <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8 shrink-0"
-                              onClick={() => openAddressInMap(order)}
-                              title="Haritada aç"
-                              aria-label="Haritada aç"
-                            >
-                              <MapPinned className="h-4 w-4" />
-                            </Button>
-                            <Button
   variant="default"
   size="sm"
   onClick={() => {
@@ -1334,10 +1174,7 @@ const myRouteOrders = orders.filter(
                     <SelectItem value="super_admin">Super Admin</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button onClick={createAdminUser} disabled={creatingAdmin}>
-                  {creatingAdmin ? "Ekleniyor..." : "Admin Ekle"}
-                </Button>
-              </div>
+                            </div>
 
               <div className="space-y-3">
                 {adminsLoading ? (
@@ -1370,47 +1207,13 @@ const myRouteOrders = orders.filter(
                           )}
                         </p>
                       </div>
-
-                      <div className="flex flex-col md:flex-row gap-2 md:items-center">
-                        <Select
-                          value={admin.role}
-                          onValueChange={(v) =>
-                            updateAdminRole(admin.id, v as AdminRole)
-                          }
-                        >
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="operations_admin">
-                              Operations Admin
-                            </SelectItem>
-                            <SelectItem value="super_admin">
-                              Super Admin
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-
-                        <Button
-                          variant={admin.is_active ? "outline" : "default"}
-                          onClick={() =>
-                            toggleAdminActive(admin.id, admin.is_active)
-                          }
-                        >
-                          {admin.is_active ? "Pasife Al" : "Aktif Et"}
-                        </Button>
-                      </div>
                     </div>
                   ))
                 )}
               </div>
             </div>
           )}
-
-          <div className="mt-10">
-            <DeliveryZoneManager />
-          </div>
-        </div>
+             </div>
       </div>
       <Footer />
     </div>
