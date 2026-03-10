@@ -8,8 +8,9 @@ const Footer = () => {
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
 
           {/* Logo + İletişim */}
-          <div className="flex flex-col md:flex-row items-center gap-4">
+          <div className="flex items-start gap-6">
 
+            {/* Logo */}
             <div className="flex items-center gap-2">
               <Milk className="h-6 w-6" />
               <span
@@ -20,7 +21,8 @@ const Footer = () => {
               </span>
             </div>
 
-            <div className="text-xs text-primary-foreground/80 text-center md:text-left leading-relaxed">
+            {/* İletişim */}
+            <div className="text-xs text-primary-foreground/80 leading-relaxed">
               <p>
                 Mimar Sinan Mahallesi, Özgürlük Caddesi, 7087. Sokak No7/A
               </p>
@@ -29,7 +31,9 @@ const Footer = () => {
                 <a href="tel:+905443074564" className="hover:underline">
                   +90 544 307 45 64
                 </a>
-                {" · "}
+              </p>
+
+              <p>
                 <a
                   href="mailto:Sutonline@sadesut.com"
                   className="hover:underline"
