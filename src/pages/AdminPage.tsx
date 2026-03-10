@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
-import { LogOut, ShieldAlert, Users } from "lucide-react";
+import { LogOut, ShieldAlert, Users, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,6 +29,27 @@ type AdminUserRow = {
   created_at: string;
 };
 
+type CustomerOverviewRow = {
+  user_id: string;
+  full_name: string | null;
+  phone: string | null;
+  address: string | null;
+  profile_created_at: string | null;
+  is_frozen: boolean;
+  frozen_reason: string | null;
+  frozen_at: string | null;
+  total_orders: number | null;
+  total_spent: number | null;
+  last_order_at: string | null;
+  last_delivery_date: string | null;
+  pending_orders: number | null;
+  approved_orders: number | null;
+  preparing_orders: number | null;
+  delivering_orders: number | null;
+  delivered_orders: number | null;
+  cancelled_orders: number | null;
+};
+
 const AdminPage = () => {
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
@@ -42,6 +63,12 @@ const AdminPage = () => {
   const [newAdminRole, setNewAdminRole] =
     useState<AdminRole>("operations_admin");
   const [creatingAdmin, setCreatingAdmin] = useState(false);
+
+  const [customers, setCustomers] = useState<CustomerOverviewRow[]>([]);
+  const [customersLoading, setCustomersLoading] = useState(false);
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [selectedCustomer, setSelectedCustomer] =
+    useState<CustomerOverviewRow | null>(null);
 
   const loadAdminUsers = async () => {
     setAdminsLoading(true);
@@ -60,6 +87,26 @@ const AdminPage = () => {
       toast.error(error.message || "Admin kullanıcılar yüklenemedi");
     } finally {
       setAdminsLoading(false);
+    }
+  };
+
+  const loadCustomers = async () => {
+    setCustomersLoading(true);
+
+    try {
+      const { data, error } = await supabase
+        .from("customer_overview")
+        .select("*")
+        .order("full_name", { ascending: true });
+
+      if (error) throw error;
+
+      setCustomers(data || []);
+    } catch (error: any) {
+      console.error("Müşteriler alınamadı:", error);
+      toast.error(error.message || "Müşteriler yüklenemedi");
+    } finally {
+      setCustomersLoading(false);
     }
   };
 
@@ -105,7 +152,10 @@ const AdminPage = () => {
 
         setAdminUser(adminData);
         setAuthorized(true);
-        await loadAdminUsers();
+
+        if (adminData.role === "super_admin") {
+          await Promise.all([loadAdminUsers(), loadCustomers()]);
+        }
       } catch (error: any) {
         console.error("Admin yetki kontrolü hatası:", error);
         toast.error(error.message || "Yetki kontrolü yapılamadı");
@@ -210,6 +260,22 @@ const AdminPage = () => {
     }
   };
 
+  const filteredCustomers = useMemo(() => {
+    const q = customerQuery.trim().toLowerCase();
+
+    if (!q) return customers;
+
+    return customers.filter((customer) => {
+      const fullName = (customer.full_name || "").toLowerCase();
+      const phone = (customer.phone || "").toLowerCase();
+      const address = (customer.address || "").toLowerCase();
+
+      return (
+        fullName.includes(q) || phone.includes(q) || address.includes(q)
+      );
+    });
+  }, [customers, customerQuery]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -260,9 +326,44 @@ const AdminPage = () => {
     );
   }
 
+  if (adminUser.role !== "super_admin") {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="pt-24 pb-20 flex items-center justify-center min-h-[80vh] px-4">
+          <div
+            className="w-full max-w-md bg-card rounded-2xl p-8 text-center"
+            style={{ boxShadow: "var(--shadow-elevated)" }}
+          >
+            <ShieldAlert className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <h2
+              className="text-2xl font-bold text-foreground mb-2"
+              style={{ fontFamily: "var(--font-heading)" }}
+            >
+              Yetkisiz Erişim
+            </h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Bu sayfa sadece Super Admin kullanıcılar içindir.
+            </p>
+            <div className="flex gap-2 justify-center">
+              <Button
+                variant="outline"
+                onClick={() => (window.location.href = "/")}
+              >
+                Ana Sayfa
+              </Button>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+
       <div className="pt-24 pb-20">
         <div className="container mx-auto px-4 max-w-6xl">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
@@ -281,12 +382,7 @@ const AdminPage = () => {
                 <span className="font-medium">
                   {adminUser.full_name || adminUser.email}
                 </span>{" "}
-                ·{" "}
-                <span className="font-medium">
-                  {adminUser.role === "super_admin"
-                    ? "Super Admin"
-                    : "Operations Admin"}
-                </span>
+                · <span className="font-medium">Super Admin</span>
               </p>
             </div>
 
@@ -294,137 +390,343 @@ const AdminPage = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={loadAdminUsers}
-                disabled={adminsLoading}
+                onClick={async () => {
+                  await Promise.all([loadAdminUsers(), loadCustomers()]);
+                }}
+                disabled={adminsLoading || customersLoading}
               >
-                {adminsLoading ? "Yükleniyor..." : "Yenile"}
+                {adminsLoading || customersLoading ? "Yükleniyor..." : "Yenile"}
+              </Button>
+
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Çıkış
               </Button>
             </div>
           </div>
 
-          {adminUser.role === "super_admin" && (
-            <div
-              className="bg-card rounded-xl p-5 md:p-6"
-              style={{ boxShadow: "var(--shadow-card)" }}
-            >
-              <div className="mb-6 flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                <div>
-                  <h2
-                    className="text-2xl font-bold text-foreground"
-                    style={{ fontFamily: "var(--font-heading)" }}
+          <div
+            className="bg-card rounded-xl p-5 md:p-6"
+            style={{ boxShadow: "var(--shadow-card)" }}
+          >
+            <div className="mb-6 flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              <div>
+                <h2
+                  className="text-2xl font-bold text-foreground"
+                  style={{ fontFamily: "var(--font-heading)" }}
+                >
+                  Admin Kullanıcı Yönetimi
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Yeni admin ekleyin, rollerini değiştirin veya pasife alın.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-4 gap-3 mb-6">
+              <Input
+                placeholder="E-posta"
+                value={newAdminEmail}
+                onChange={(e) => setNewAdminEmail(e.target.value)}
+              />
+              <Input
+                placeholder="Ad Soyad"
+                value={newAdminName}
+                onChange={(e) => setNewAdminName(e.target.value)}
+              />
+              <Select
+                value={newAdminRole}
+                onValueChange={(v) => setNewAdminRole(v as AdminRole)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="operations_admin">
+                    Operations Admin
+                  </SelectItem>
+                  <SelectItem value="super_admin">Super Admin</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button onClick={createAdminUser} disabled={creatingAdmin}>
+                {creatingAdmin ? "Ekleniyor..." : "Admin Ekle"}
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {adminsLoading ? (
+                <p className="text-sm text-muted-foreground">
+                  Admin kullanıcılar yükleniyor...
+                </p>
+              ) : adminUsers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Henüz admin kullanıcı bulunmuyor.
+                </p>
+              ) : (
+                adminUsers.map((admin) => (
+                  <div
+                    key={admin.id}
+                    className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border border-border rounded-lg p-4"
                   >
-                    Admin Kullanıcı Yönetimi
-                  </h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Yeni admin ekleyin, rollerini değiştirin veya pasife alın.
+                    <div>
+                      <p className="font-semibold text-foreground">
+                        {admin.full_name || "İsimsiz Admin"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {admin.email}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Oluşturulma:{" "}
+                        {format(parseISO(admin.created_at), "d MMM yyyy HH:mm", {
+                          locale: tr,
+                        })}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row gap-2 md:items-center">
+                      <Select
+                        value={admin.role}
+                        onValueChange={(v) =>
+                          updateAdminRole(admin.id, v as AdminRole)
+                        }
+                      >
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="operations_admin">
+                            Operations Admin
+                          </SelectItem>
+                          <SelectItem value="super_admin">
+                            Super Admin
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Button
+                        variant={admin.is_active ? "outline" : "default"}
+                        onClick={() =>
+                          toggleAdminActive(admin.id, admin.is_active)
+                        }
+                      >
+                        {admin.is_active ? "Pasife Al" : "Aktif Et"}
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div
+            className="mt-10 bg-card rounded-xl p-5 md:p-6"
+            style={{ boxShadow: "var(--shadow-card)" }}
+          >
+            <div className="mb-6 flex items-center gap-2">
+              <Search className="h-5 w-5 text-primary" />
+              <div>
+                <h2
+                  className="text-2xl font-bold text-foreground"
+                  style={{ fontFamily: "var(--font-heading)" }}
+                >
+                  Müşteri Arama
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  İsim, telefon veya adres ile müşteri arayın. Müşteriye
+                  tıklayınca sağ panel açılır.
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <Input
+                placeholder="Ad, telefon veya adres ile ara"
+                value={customerQuery}
+                onChange={(e) => setCustomerQuery(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-3">
+              {customersLoading ? (
+                <p className="text-sm text-muted-foreground">
+                  Müşteriler yükleniyor...
+                </p>
+              ) : filteredCustomers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Eşleşen müşteri bulunamadı.
+                </p>
+              ) : (
+                filteredCustomers.map((customer) => (
+                  <button
+                    key={customer.user_id}
+                    type="button"
+                    onClick={() => setSelectedCustomer(customer)}
+                    className="w-full text-left border border-border rounded-lg p-4 hover:border-primary transition-colors"
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-foreground">
+                          {customer.full_name || "İsimsiz Müşteri"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {customer.phone || "Telefon yok"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {customer.address || "Adres yok"}
+                        </p>
+                      </div>
+
+                      <div className="text-sm text-muted-foreground">
+                        <p>Toplam sipariş: {customer.total_orders || 0}</p>
+                        <p>Toplam harcama: {Number(customer.total_spent || 0)} TL</p>
+                      </div>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="mt-10">
+            <DeliveryZoneManager />
+          </div>
+        </div>
+      </div>
+
+      {selectedCustomer && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/30 z-[60]"
+            onClick={() => setSelectedCustomer(null)}
+          />
+          <div className="fixed top-0 right-0 h-full w-full max-w-xl bg-background z-[70] border-l border-border shadow-2xl overflow-y-auto">
+            <div className="sticky top-0 bg-background border-b border-border px-6 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-foreground">
+                  {selectedCustomer.full_name || "İsimsiz Müşteri"}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Müşteri detay paneli
+                </p>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSelectedCustomer(null)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="border border-border rounded-lg p-4">
+                <h4 className="font-semibold text-foreground mb-3">
+                  Temel Bilgiler
+                </h4>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>
+                    <span className="font-medium text-foreground">Ad Soyad:</span>{" "}
+                    {selectedCustomer.full_name || "—"}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">Telefon:</span>{" "}
+                    {selectedCustomer.phone || "—"}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">Adres:</span>{" "}
+                    {selectedCustomer.address || "—"}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">Müşteri ID:</span>{" "}
+                    {selectedCustomer.user_id}
                   </p>
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-4 gap-3 mb-6">
-                <Input
-                  placeholder="E-posta"
-                  value={newAdminEmail}
-                  onChange={(e) => setNewAdminEmail(e.target.value)}
-                />
-                <Input
-                  placeholder="Ad Soyad"
-                  value={newAdminName}
-                  onChange={(e) => setNewAdminName(e.target.value)}
-                />
-                <Select
-                  value={newAdminRole}
-                  onValueChange={(v) => setNewAdminRole(v as AdminRole)}
+              <div className="border border-border rounded-lg p-4">
+                <h4 className="font-semibold text-foreground mb-3">
+                  Sipariş Özeti
+                </h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-md border border-border p-3">
+                    <p className="text-muted-foreground">Toplam Sipariş</p>
+                    <p className="text-lg font-bold text-foreground">
+                      {selectedCustomer.total_orders || 0}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-border p-3">
+                    <p className="text-muted-foreground">Toplam Harcama</p>
+                    <p className="text-lg font-bold text-foreground">
+                      {Number(selectedCustomer.total_spent || 0)} TL
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-border p-3">
+                    <p className="text-muted-foreground">Beklemede</p>
+                    <p className="text-lg font-bold text-foreground">
+                      {selectedCustomer.pending_orders || 0}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-border p-3">
+                    <p className="text-muted-foreground">Teslim Edildi</p>
+                    <p className="text-lg font-bold text-foreground">
+                      {selectedCustomer.delivered_orders || 0}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border border-border rounded-lg p-4">
+                <h4 className="font-semibold text-foreground mb-3">
+                  Hesap Durumu
+                </h4>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>
+                    <span className="font-medium text-foreground">Durum:</span>{" "}
+                    {selectedCustomer.is_frozen ? "Dondurulmuş" : "Aktif"}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">Dondurma Nedeni:</span>{" "}
+                    {selectedCustomer.frozen_reason || "—"}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">Son Sipariş:</span>{" "}
+                    {selectedCustomer.last_order_at
+                      ? format(parseISO(selectedCustomer.last_order_at), "d MMM yyyy HH:mm", {
+                          locale: tr,
+                        })
+                      : "—"}
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">Son Teslimat:</span>{" "}
+                    {selectedCustomer.last_delivery_date || "—"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    window.open(
+                      `/admincustomers?userId=${selectedCustomer.user_id}`,
+                      "_blank"
+                    )
+                  }
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="operations_admin">
-                      Operations Admin
-                    </SelectItem>
-                    <SelectItem value="super_admin">Super Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button onClick={createAdminUser} disabled={creatingAdmin}>
-                  {creatingAdmin ? "Ekleniyor..." : "Admin Ekle"}
+                  Müşteri Sayfasında Aç
+                </Button>
+
+                <Button variant="ghost" onClick={() => setSelectedCustomer(null)}>
+                  Kapat
                 </Button>
               </div>
-
-              <div className="space-y-3">
-                {adminsLoading ? (
-                  <p className="text-sm text-muted-foreground">
-                    Admin kullanıcılar yükleniyor...
-                  </p>
-                ) : adminUsers.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Henüz admin kullanıcı bulunmuyor.
-                  </p>
-                ) : (
-                  adminUsers.map((admin) => (
-                    <div
-                      key={admin.id}
-                      className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border border-border rounded-lg p-4"
-                    >
-                      <div>
-                        <p className="font-semibold text-foreground">
-                          {admin.full_name || "İsimsiz Admin"}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {admin.email}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Oluşturulma:{" "}
-                          {format(parseISO(admin.created_at), "d MMM yyyy HH:mm", {
-                            locale: tr,
-                          })}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-col md:flex-row gap-2 md:items-center">
-                        <Select
-                          value={admin.role}
-                          onValueChange={(v) =>
-                            updateAdminRole(admin.id, v as AdminRole)
-                          }
-                        >
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="operations_admin">
-                              Operations Admin
-                            </SelectItem>
-                            <SelectItem value="super_admin">
-                              Super Admin
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-
-                        <Button
-                          variant={admin.is_active ? "outline" : "default"}
-                          onClick={() =>
-                            toggleAdminActive(admin.id, admin.is_active)
-                          }
-                        >
-                          {admin.is_active ? "Pasife Al" : "Aktif Et"}
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
             </div>
-          )}
+          </div>
+        </>
+      )}
 
-          {adminUser.role === "super_admin" && (
-            <div className="mt-10">
-              <DeliveryZoneManager />
-            </div>
-          )}
-        </div>
-      </div>
       <Footer />
     </div>
   );
