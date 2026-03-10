@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
-import { LogOut, ShieldAlert, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -298,11 +297,6 @@ const AdminPage = () => {
                 disabled={adminsLoading}
               >
                 {adminsLoading ? "Yükleniyor..." : "Yenile"}
-              </Button>
-
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Çıkış
               </Button>
             </div>
           </div>
