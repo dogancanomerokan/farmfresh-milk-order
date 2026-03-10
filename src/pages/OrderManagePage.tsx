@@ -19,7 +19,6 @@ import {
   Filter,
   RefreshCw,
   Download,
-  LogOut,
   ShieldAlert,
   Trash2,
   Hand,
@@ -684,16 +683,6 @@ const OrderManagePage = () => {
 
             <div className="flex gap-2 self-start">
               <Button
-                variant="default"
-                size="sm"
-                onClick={handleOpenBulkRoute}
-                disabled={myRouteOrders.length === 0}
-              >
-                <MapPinned className="h-4 w-4 mr-2" />
-                Benim Rotam
-              </Button>
-
-              <Button
                 variant="outline"
                 size="sm"
                 onClick={loadOrders}
@@ -710,11 +699,6 @@ const OrderManagePage = () => {
               >
                 <Download className="h-4 w-4 mr-2" />
                 CSV İndir
-              </Button>
-
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Çıkış
               </Button>
             </div>
           </div>
@@ -1048,30 +1032,6 @@ const OrderManagePage = () => {
                                 aria-label="Haritada aç"
                               >
                                 <MapPinned className="h-4 w-4" />
-                              </Button>
-
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => {
-                                  const address = [
-                                    order.address,
-                                    order.mahalle,
-                                    order.ilce,
-                                    order.il,
-                                    "Türkiye",
-                                  ]
-                                    .filter(Boolean)
-                                    .join(", ");
-
-                                  const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-                                    address
-                                  )}&travelmode=driving`;
-
-                                  window.open(navUrl, "_blank");
-                                }}
-                              >
-                                🚚 Navigasyon
                               </Button>
                             </div>
                           </div>
