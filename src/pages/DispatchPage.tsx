@@ -9,7 +9,6 @@ import {
   Truck,
   XCircle,
   RefreshCw,
-  LogOut,
   ShieldAlert,
   Hand,
   MapPinned
