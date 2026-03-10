@@ -301,11 +301,6 @@ const DispatchPage = () => {
               <RefreshCw className="h-4 w-4 mr-2" />
               Yenile
             </Button>
-
-            <Button variant="ghost" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Çıkış
-            </Button>
           </div>
         </div>
 
