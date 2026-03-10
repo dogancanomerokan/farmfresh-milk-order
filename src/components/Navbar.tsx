@@ -88,7 +88,16 @@ const Navbar = () => {
               Yönetim Paneli
             </Link>
           )}
-
+          
+{!adminRoleLoading && adminRole && (
+  <Link
+    to="/order-manage"
+    className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+  >
+    Sipariş Yönetimi
+  </Link>
+)}
+          
           {!adminRoleLoading && adminRole && (
             <Link
               to="/dispatch"
@@ -156,7 +165,17 @@ const Navbar = () => {
               Yönetim Paneli
             </Link>
           )}
-
+          
+{!adminRoleLoading && adminRole && (
+  <Link
+    to="/order-manage"
+    onClick={() => setIsOpen(false)}
+    className="block text-sm font-medium text-foreground py-2"
+  >
+    Sipariş Yönetimi
+  </Link>
+)}
+          
           {!adminRoleLoading && adminRole && (
             <Link
               to="/dispatch"
