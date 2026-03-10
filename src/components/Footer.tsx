@@ -26,7 +26,9 @@ const Footer = () => {
               <p>
                 Mimar Sinan Mahallesi, Özgürlük Caddesi, 7087. Sokak No7/A
               </p>
-
+              <p>
+                Silivri/İstanbul
+              </p>
               <p>
                 <a href="tel:+905443074564" className="hover:underline">
                   +90 544 307 45 64
