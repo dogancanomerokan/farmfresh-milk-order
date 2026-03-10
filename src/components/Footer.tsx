@@ -8,7 +8,7 @@ const Footer = () => {
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
 
           {/* Logo + İletişim */}
-          <div className="flex items-start gap-6">
+          <div className="flex items-start gap-8">
 
             {/* Logo */}
             <div className="flex items-center gap-2">
@@ -22,27 +22,29 @@ const Footer = () => {
             </div>
 
             {/* İletişim */}
-            <div className="text-xs text-primary-foreground/50 leading-relaxed">
-              <p>
-                Mimar Sinan Mahallesi, Özgürlük Caddesi, 
-              </p>
-              <p>
-                7087. Sokak No7/A, Silivri/İstanbul
-              </p>
-              <p>
-                <a href="tel:+905443074564" className="hover:underline">
-                  +90 544 307 45 64
-                </a>
-              </p>
+            <div className="text-xs text-primary-foreground/80 grid grid-cols-[70px_1fr] gap-x-2 gap-y-1">
 
-              <p>
-                <a
-                  href="mailto:Sutonline@sadesut.com"
-                  className="hover:underline"
-                >
-                  Sutonline@sadesut.com
-                </a>
-              </p>
+              <span className="font-medium">Adres</span>
+              <span>
+                : Mimar Sinan Mahallesi, Özgürlük Caddesi
+                <br />
+                7087. Sokak No7/A
+              </span>
+
+              <span className="font-medium">Telefon</span>
+              <span>
+                : <a href="tel:+905443074564" className="hover:underline">
+                    +90 544 307 45 64
+                  </a>
+              </span>
+
+              <span className="font-medium">E-Posta</span>
+              <span>
+                : <a href="mailto:Sutonline@sadesut.com" className="hover:underline">
+                    Sutonline@sadesut.com
+                  </a>
+              </span>
+
             </div>
 
           </div>
