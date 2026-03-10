@@ -291,15 +291,15 @@ const DispatchPage = () => {
           <h1 className="text-3xl font-bold">Dağıtım Paneli</h1>
 
           <div className="flex gap-2">
-            <Button onClick={handleOpenBulkRoute} disabled={!myRouteOrders.length}>
-              <MapPinned className="h-4 w-4 mr-2" />
-              Benim Rotam
-            </Button>
-
-            <Button variant="outline" onClick={loadOrders}>
+             <Button variant="outline" onClick={loadOrders}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Yenile
             </Button>
+           <Button onClick={handleOpenBulkRoute} disabled={!myRouteOrders.length}>
+              <MapPinned className="h-4 w-4 mr-2" />
+              Benim Rotam
+            </Button>
+          
           </div>
         </div>
 
