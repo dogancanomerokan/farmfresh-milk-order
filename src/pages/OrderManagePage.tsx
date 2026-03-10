@@ -351,12 +351,6 @@ const OrderManagePage = () => {
     checkAdminAccess();
   }, []);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.info("Çıkış yapıldı");
-    window.location.href = "/";
-  };
-
   const updateStatus = async (id: string, status: OrderStatus) => {
     try {
       const targetOrder = orders.find((o) => o.id === id);
@@ -561,25 +555,7 @@ const OrderManagePage = () => {
     delivered: orders.filter((o) => o.status === "delivered").length,
   };
 
-  const myRouteOrders = orders.filter(
-    (order) =>
-      order.claimed_by_admin_id === adminUser?.id &&
-      ACTIVE_ORDER_STATUSES.includes(order.status as any) &&
-      order.address
-  );
-
-  const handleOpenBulkRoute = () => {
-    const url = buildGoogleMapsDirectionsUrl(myRouteOrders);
-
-    if (!url) {
-      toast.error("Rota için uygun aktif sipariş bulunamadı.");
-      return;
-    }
-
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
-  const today = new Date();
+   const today = new Date();
 
   const todaysOrders = orders.filter(
     (o) =>
