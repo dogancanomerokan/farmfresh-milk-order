@@ -22,12 +22,12 @@ const Footer = () => {
             </div>
 
             {/* İletişim */}
-            <div className="text-xs text-primary-foreground/80 leading-relaxed">
+            <div className="text-xs text-primary-foreground/50 leading-relaxed">
               <p>
-                Mimar Sinan Mahallesi, Özgürlük Caddesi, 7087. Sokak No7/A
+                Mimar Sinan Mahallesi, Özgürlük Caddesi, 
               </p>
               <p>
-                Silivri/İstanbul
+                7087. Sokak No7/A, Silivri/İstanbul
               </p>
               <p>
                 <a href="tel:+905443074564" className="hover:underline">
