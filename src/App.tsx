@@ -12,6 +12,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import AdminPage from "./pages/AdminPage";
 import DispatchPage from "./pages/DispatchPage";
+import OrderManagePage from "./pages/OrderManagePage";
 import CustomerManagementPage from "./pages/CustomerManagementPage";
 import NotFound from "./pages/NotFound";
 
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/dispatch" element={<DispatchPage />} />
+            <Route path="/order-manage" element={<OrderManagePage />} />
             <Route path="/admincustomers" element={<CustomerManagementPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
