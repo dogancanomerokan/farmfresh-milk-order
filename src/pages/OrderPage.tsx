@@ -20,12 +20,14 @@ import { getMahalleler } from "@/lib/mahalle-data";
 import { supabase } from "@/lib/supabaseClient";
 
 const timeSlots = [
-  "08:00 - 10:00",
-  "10:00 - 12:00",
-  "12:00 - 14:00",
-  "14:00 - 16:00",
-  "16:00 - 18:00",
+  //"08:00 - 10:00",
+  //"10:00 - 12:00",
+  //"12:00 - 14:00",
+  //"14:00 - 16:00",
+  //"16:00 - 18:00",
   "18:00 - 20:00",
+  "20:00 - 22:00",
+  "22:00 - 00:00",
 ];
 
 type Product = {
@@ -533,6 +535,7 @@ const OrderPage = () => {
                           mode="single"
                           selected={date}
                           onSelect={setDate}
+                          locale={tr}
                           disabled={(d) => d < new Date()}
                           initialFocus
                           className="p-3 pointer-events-auto"
