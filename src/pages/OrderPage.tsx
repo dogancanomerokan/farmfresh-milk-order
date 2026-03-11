@@ -46,6 +46,69 @@ const getDisabledSlots = (date?: Date) => {
   return [];
 };
 
+export default function DeliveryForm() {
+  const [deliveryDate, setDeliveryDate] = useState<Date | undefined>();
+  const [deliveryTime, setDeliveryTime] = useState("");
+
+  const disabledSlots = useMemo(() => {
+    if (!deliveryDate) return [];
+
+    if (isWeekday(deliveryDate)) {
+      return timeSlots.filter((slot) => !weekdayAllowedSlots.includes(slot));
+    }
+
+    return [];
+  }, [deliveryDate]);
+
+  useEffect(() => {
+    if (deliveryTime && disabledSlots.includes(deliveryTime)) {
+      setDeliveryTime("");
+    }
+  }, [deliveryDate, deliveryTime, disabledSlots]);
+
+  return (
+    <div className="grid gap-4">
+      <Calendar
+        mode="single"
+        selected={deliveryDate}
+        onSelect={setDeliveryDate}
+        locale={tr}
+        formatters={{
+          formatCaption: (date) =>
+            date.toLocaleDateString("tr-TR", {
+              month: "long",
+              year: "numeric",
+            }),
+        }}
+        className="rounded-md border"
+      />
+
+      <Select value={deliveryTime} onValueChange={setDeliveryTime}>
+        <SelectTrigger>
+          <SelectValue placeholder="Teslimat saati seçin" />
+        </SelectTrigger>
+
+        <SelectContent>
+          {timeSlots.map((slot) => {
+            const isDisabled = disabledSlots.includes(slot);
+
+            return (
+              <SelectItem
+                key={slot}
+                value={slot}
+                disabled={isDisabled}
+                className={isDisabled ? "opacity-40 cursor-not-allowed" : ""}
+              >
+                {slot}
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 type Product = {
   id: string;
   name: string;
