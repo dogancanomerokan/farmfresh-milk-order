@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { CalendarIcon, CheckCircle, AlertTriangle } from "lucide-react";
@@ -36,6 +36,11 @@ const weekdayAllowedSlots = [
   "22:00 - 00:00",
 ];
 
+const isWeekday = (date: Date) => {
+  const day = date.getDay();
+  return day >= 1 && day <= 5;
+};
+
 const getDisabledSlots = (date?: Date) => {
   if (!date) return [];
 
@@ -45,69 +50,6 @@ const getDisabledSlots = (date?: Date) => {
 
   return [];
 };
-
-export default function DeliveryForm() {
-  const [deliveryDate, setDeliveryDate] = useState<Date | undefined>();
-  const [deliveryTime, setDeliveryTime] = useState("");
-
-  const disabledSlots = useMemo(() => {
-    if (!deliveryDate) return [];
-
-    if (isWeekday(deliveryDate)) {
-      return timeSlots.filter((slot) => !weekdayAllowedSlots.includes(slot));
-    }
-
-    return [];
-  }, [deliveryDate]);
-
-  useEffect(() => {
-    if (deliveryTime && disabledSlots.includes(deliveryTime)) {
-      setDeliveryTime("");
-    }
-  }, [deliveryDate, deliveryTime, disabledSlots]);
-
-  return (
-    <div className="grid gap-4">
-      <Calendar
-        mode="single"
-        selected={deliveryDate}
-        onSelect={setDeliveryDate}
-        locale={tr}
-        formatters={{
-          formatCaption: (date) =>
-            date.toLocaleDateString("tr-TR", {
-              month: "long",
-              year: "numeric",
-            }),
-        }}
-        className="rounded-md border"
-      />
-
-      <Select value={deliveryTime} onValueChange={setDeliveryTime}>
-        <SelectTrigger>
-          <SelectValue placeholder="Teslimat saati seçin" />
-        </SelectTrigger>
-
-        <SelectContent>
-          {timeSlots.map((slot) => {
-            const isDisabled = disabledSlots.includes(slot);
-
-            return (
-              <SelectItem
-                key={slot}
-                value={slot}
-                disabled={isDisabled}
-                className={isDisabled ? "opacity-40 cursor-not-allowed" : ""}
-              >
-                {slot}
-              </SelectItem>
-            );
-          })}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
 
 type Product = {
   id: string;
@@ -140,6 +82,16 @@ const OrderPage = () => {
     quantity: "1",
     notes: "",
   });
+
+  const disabledSlots = useMemo(() => {
+    return getDisabledSlots(date);
+  }, [date]);
+
+  useEffect(() => {
+    if (form.timeSlot && disabledSlots.includes(form.timeSlot)) {
+      setForm((prev) => ({ ...prev, timeSlot: "" }));
+    }
+  }, [date, form.timeSlot, disabledSlots]);
 
   useEffect(() => {
     setZones(getDeliveryZones());
@@ -615,6 +567,13 @@ const OrderPage = () => {
                           selected={date}
                           onSelect={setDate}
                           locale={tr}
+                          formatters={{
+                            formatCaption: (date) =>
+                              date.toLocaleDateString("tr-TR", {
+                                month: "long",
+                                year: "numeric",
+                              }),
+                          }}
                           disabled={(d) => d < new Date()}
                           initialFocus
                           className="p-3 pointer-events-auto"
@@ -630,11 +589,20 @@ const OrderPage = () => {
                         <SelectValue placeholder="Saat seçin" />
                       </SelectTrigger>
                       <SelectContent>
-                        {timeSlots.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {t}
-                          </SelectItem>
-                        ))}
+                        {timeSlots.map((t) => {
+                          const isDisabled = disabledSlots.includes(t);
+
+                          return (
+                            <SelectItem
+                              key={t}
+                              value={t}
+                              disabled={isDisabled}
+                              className={isDisabled ? "opacity-40 cursor-not-allowed" : ""}
+                            >
+                              {t}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
