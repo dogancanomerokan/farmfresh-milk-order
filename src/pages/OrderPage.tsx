@@ -36,6 +36,16 @@ const weekdayAllowedSlots = [
   "22:00 - 00:00",
 ];
 
+const getDisabledSlots = (date?: Date) => {
+  if (!date) return [];
+
+  if (isWeekday(date)) {
+    return timeSlots.filter((slot) => !weekdayAllowedSlots.includes(slot));
+  }
+
+  return [];
+};
+
 type Product = {
   id: string;
   name: string;
