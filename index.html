@@ -1,51 +1,96 @@
 <!doctype html>
 <html lang="tr">
-  
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=6" />
     <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png?v=6" />
-    <link rel="canonical" href="https://www.sadesut.com/" />
     <link rel="apple-touch-icon" href="/favicon.png?v=6" />
+
+    <!-- SEO -->
     <title>Sade Süt — Çiftlikten Kapınıza Taze Süt</title>
-    <meta name="description" content="Taze çiftlik sütünü kapınıza kadar teslim ediyoruz. Katkısız, doğal, saf süt." />
+    <meta
+      name="description"
+      content="Sade Süt ile katkısız, doğal ve taze çiftlik sütü kapınıza kadar teslim edilir. İstanbul içi süt abonelik ve sipariş sistemi."
+    />
     <meta name="author" content="Sade Süt" />
+    <link rel="canonical" href="https://www.sadesut.com/" />
 
-    <meta property="og:title" content="Sade Süt — Çiftlikten Taze Süt Teslimatı" />
-    <meta property="og:description" content="Taze çiftlik sütünü kapınıza kadar teslim ediyoruz." />
+    <!-- Open Graph -->
+    <meta property="og:title" content="Sade Süt — Çiftlikten Kapınıza Taze Süt" />
+    <meta
+      property="og:description"
+      content="Katkısız, doğal ve taze çiftlik sütü kapınıza kadar teslim edilir."
+    />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.sadesut.com/" />
+    <meta property="og:site_name" content="Sade Süt" />
     <meta property="og:image" content="https://www.sadesut.com/Logo.png" />
-    <meta property="og:site_name" content="Sade Süt">
 
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Sade Süt — Çiftlikten Kapınıza Taze Süt" />
+    <meta
+      name="twitter:description"
+      content="Katkısız, doğal ve taze çiftlik sütü kapınıza kadar teslim edilir."
+    />
     <meta name="twitter:image" content="https://www.sadesut.com/Logo.png" />
 
+    <!-- Organization Schema -->
     <script type="application/ld+json">
-{
- "@context": "https://schema.org",
- "@type": "Organization",
- "name": "Sade Süt",
- "url": "https://www.sadesut.com",
- "logo": "https://www.sadesut.com/favicon.png",
- "description": "Sade Süt, çiftlikten kapınıza katkısız ve doğal günlük süt teslimatı sağlar.",
- "contactPoint": {
-   "@type": "ContactPoint",
-   "telephone": "+905443074564",
-   "contactType": "customer service",
-   "areaServed": "TR",
-   "availableLanguage": "Turkish"
- },
- "sameAs": [
-   "https://www.instagram.com/sadesut"
- ]
-}
-</script>
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Sade Süt",
+        "url": "https://www.sadesut.com",
+        "logo": "https://www.sadesut.com/favicon.png",
+        "description": "Sade Süt, İstanbul'da katkısız, doğal ve taze çiftlik sütünü kapıya teslim eden süt abonelik ve sipariş hizmetidir.",
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "telephone": "+905443074564",
+          "contactType": "customer service",
+          "areaServed": "TR",
+          "availableLanguage": "Turkish"
+        },
+        "sameAs": [
+          "https://www.instagram.com/sadesut"
+        ]
+      }
+    </script>
+
+    <!-- WebSite Schema -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Sade Süt",
+        "url": "https://www.sadesut.com"
+      }
+    </script>
+
+    <!-- LocalBusiness Schema -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "Sade Süt",
+        "image": "https://www.sadesut.com/favicon.png",
+        "url": "https://www.sadesut.com",
+        "telephone": "+905443074564",
+        "address": {
+          "@type": "PostalAddress",
+          "addressCountry": "TR",
+          "addressLocality": "İstanbul"
+        },
+        "areaServed": "İstanbul"
+      }
+    </script>
   </head>
 
   <body>
     <div id="root"></div>
-    
-    <script type="module" src="/src/main.tsx"></script>    
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
