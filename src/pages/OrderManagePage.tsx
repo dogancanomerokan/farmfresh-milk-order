@@ -1,4 +1,4 @@
-import { useState, useEffect, type ElementType } from "react";
+import { useState, useEffect, useMemo, type ElementType } from "react";
 import {
   format,
   parseISO,
@@ -221,12 +221,15 @@ const OrderManagePage = () => {
   const [dateTo, setDateTo] = useState<Date>();
 
   const getAdminNameById = (adminId: string | null) => {
-    if (!adminId) return "—";
-    if (adminUser?.id === adminId) {
-      return adminUser.full_name || adminUser.email;
-    }
-    return "Admin";
-  };
+  if (!adminId) return "—";
+
+  const matchedAdmin = adminUsers.find((a) => a.id === adminId);
+  if (matchedAdmin) {
+    return matchedAdmin.full_name || matchedAdmin.email;
+  }
+
+  return "—";
+};
 
   const getFullAddress = (order: AdminOrder) => {
     return [order.address, order.mahalle, order.ilce, order.il, "Türkiye"]
@@ -287,6 +290,30 @@ const OrderManagePage = () => {
         items: itemsData.filter((item) => item.order_id === order.id),
       }));
 
+      const adminIds = Array.from(
+  new Set(
+    mergedOrders
+      .flatMap((order) => [
+        order.claimed_by_admin_id,
+        order.delivered_by_admin_id,
+      ])
+      .filter(Boolean)
+  )
+) as string[];
+
+if (adminIds.length > 0) {
+  const { data: adminRows, error: adminRowsError } = await supabase
+    .from("admin_users")
+    .select("id, auth_user_id, email, full_name, role, is_active, created_at")
+    .in("id", adminIds);
+
+  if (adminRowsError) throw adminRowsError;
+
+  setAdminUsers(adminRows || []);
+} else {
+  setAdminUsers([]);
+}
+      
       setOrders(mergedOrders);
     } catch (error: any) {
       console.error("Siparişler yüklenemedi:", error);
@@ -299,6 +326,7 @@ const OrderManagePage = () => {
   useEffect(() => {
     const checkAdminAccess = async () => {
       setLoading(true);
+      setAdminUsers([adminData]);
 
       try {
         const {
