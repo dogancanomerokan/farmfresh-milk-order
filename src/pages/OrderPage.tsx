@@ -324,22 +324,6 @@ const OrderPage = () => {
         throw itemError;
       }
       
-      const { error: notifyError } = await supabase.functions.invoke(
-  "new-order-notify",
-  {
-    body: { orderId },
-  }
-);
-
-if (notifyError) {
-  console.error("Mail bildirimi gönderilemedi:", notifyError);
-}
-      
-const { error: notifyError } = await supabase.functions.invoke(
-  "new-order-notify",
-  {
-    body: { orderId },
-  }
 );
 
 if (notifyError) {
