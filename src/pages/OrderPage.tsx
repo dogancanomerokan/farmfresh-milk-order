@@ -331,6 +331,16 @@ const { error: notifyError } = await supabase.functions.invoke(
   }
 );
 
+const { data: notifyData, error: notifyError } = await supabase.functions.invoke(
+  "new-order-notify",
+  {
+    body: { orderId },
+  }
+);
+
+console.log("notifyData:", notifyData);
+console.log("notifyError:", notifyError);
+
 if (notifyError) {
   console.error("Mail bildirimi gönderilemedi:", notifyError);
 }
