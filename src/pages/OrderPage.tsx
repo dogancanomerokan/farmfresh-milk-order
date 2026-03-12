@@ -574,7 +574,11 @@ const OrderPage = () => {
                                 year: "numeric",
                               }),
                           }}
-                          disabled={(d) => d < new Date()}
+                         disabled={(d) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return d < today;
+}}
                           initialFocus
                           className="p-3 pointer-events-auto"
                         />
