@@ -217,10 +217,11 @@ const OrderManagePage = () => {
   const [ordersLoading, setOrdersLoading] = useState(false);
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [dateFrom, setDateFrom] = useState<Date>();
-  const [dateTo, setDateTo] = useState<Date>();
+const [dateFrom, setDateFrom] = useState<Date>();
+const [dateTo, setDateTo] = useState<Date>();
+const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([]);
 
-  const getAdminNameById = (adminId: string | null) => {
+const getAdminNameById = (adminId: string | null) => {
   if (!adminId) return "—";
 
   const matchedAdmin = adminUsers.find((a) => a.id === adminId);
@@ -231,11 +232,11 @@ const OrderManagePage = () => {
   return "—";
 };
 
-  const getFullAddress = (order: AdminOrder) => {
-    return [order.address, order.mahalle, order.ilce, order.il, "Türkiye"]
-      .filter(Boolean)
-      .join(", ");
-  };
+const getFullAddress = (order: AdminOrder) => {
+  return [order.address, order.mahalle, order.ilce, order.il, "Türkiye"]
+    .filter(Boolean)
+    .join(", ");
+};
 
   const openAddressInMap = (order: AdminOrder) => {
     const fullAddress = getFullAddress(order);
