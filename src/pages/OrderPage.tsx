@@ -323,7 +323,28 @@ const OrderPage = () => {
         await supabase.from("orders").delete().eq("id", orderId);
         throw itemError;
       }
+      
+      const { error: notifyError } = await supabase.functions.invoke(
+  "new-order-notify",
+  {
+    body: { orderId },
+  }
+);
 
+if (notifyError) {
+  console.error("Mail bildirimi gönderilemedi:", notifyError);
+}
+      
+const { error: notifyError } = await supabase.functions.invoke(
+  "new-order-notify",
+  {
+    body: { orderId },
+  }
+);
+
+if (notifyError) {
+  console.error("Mail bildirimi gönderilemedi:", notifyError);
+}
       setSubmitted(true);
       toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
     } catch (err: any) {
