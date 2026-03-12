@@ -168,13 +168,21 @@ const OrderPage = () => {
 
   const hasZones = zones.length > 0;
 
-  const availableIller = hasZones
-    ? [...new Set(zones.map((z) => z.il))].sort((a, b) => a.localeCompare(b, "tr"))
-    : getIller();
+//  const availableIller = hasZones
+//    ? [...new Set(zones.map((z) => z.il))].sort((a, b) => a.localeCompare(b, "tr"))
+//   : getIller();
 
-  const availableIlceler = hasZones
-    ? [...new Set(zones.filter((z) => z.il === form.il).map((z) => z.ilce))].sort((a, b) => a.localeCompare(b, "tr"))
-    : getIlceler(form.il);
+ // const availableIlceler = hasZones
+//    ? [...new Set(zones.filter((z) => z.il === form.il).map((z) => z.ilce))].sort((a, b) => a.localeCompare(b, "tr"))
+//    : getIlceler(form.il);
+
+  const availableIller = hasZones
+  ? [...new Set(zones.map((z) => z.il))].sort((a, b) => a.localeCompare(b, "tr"))
+  : [];
+
+const availableIlceler = hasZones
+  ? [...new Set(zones.filter((z) => z.il === form.il).map((z) => z.ilce))].sort((a, b) => a.localeCompare(b, "tr"))
+  : [];
 
   const adminMahalleler = hasZones
     ? zones.filter((z) => z.il === form.il && z.ilce === form.ilce).flatMap((z) => z.mahalleler)
