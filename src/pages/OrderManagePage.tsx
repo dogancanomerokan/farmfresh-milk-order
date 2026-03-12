@@ -327,8 +327,7 @@ if (adminIds.length > 0) {
   useEffect(() => {
     const checkAdminAccess = async () => {
       setLoading(true);
-      setAdminUsers([adminData]);
-
+   
       try {
         const {
           data: { user },
