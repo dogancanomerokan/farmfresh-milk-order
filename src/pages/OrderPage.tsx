@@ -309,28 +309,34 @@ const OrderPage = () => {
       }
 
       const { error: itemError } = await supabase.from("order_items").insert({
-        order_id: orderId,
-        product_id: selectedProduct.id,
-        product_name_snapshot: selectedProduct.name,
-        volume_snapshot: selectedProduct.Volume,
-        unit_snapshot: selectedProduct.unit,
-        unit_price: unitPrice,
-        quantity: quantityNumber,
-        line_total: totalAmount,
-      });
+  order_id: orderId,
+  product_id: selectedProduct.id,
+  product_name_snapshot: selectedProduct.name,
+  volume_snapshot: selectedProduct.Volume,
+  unit_snapshot: selectedProduct.unit,
+  unit_price: unitPrice,
+  quantity: quantityNumber,
+  line_total: totalAmount,
+});
 
-      if (itemError) {
-        await supabase.from("orders").delete().eq("id", orderId);
-        throw itemError;
-      }
-      
+if (itemError) {
+  await supabase.from("orders").delete().eq("id", orderId);
+  throw itemError;
+}
+
+const { error: notifyError } = await supabase.functions.invoke(
+  "new-order-notify",
+  {
+    body: { orderId },
+  }
 );
 
 if (notifyError) {
   console.error("Mail bildirimi gönderilemedi:", notifyError);
 }
-      setSubmitted(true);
-      toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
+
+setSubmitted(true);
+toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
     } catch (err: any) {
       console.error("Sipariş oluşturma hatası:", err);
       toast.error(err.message || "Sipariş oluşturulamadı");
