@@ -344,7 +344,25 @@ console.log("notifyError:", notifyError);
 if (notifyError) {
   console.error("Mail bildirimi gönderilemedi:", notifyError);
 }
+try {
+  const { data: notifyData, error: notifyError } =
+    await supabase.functions.invoke("new-order-notify", {
+      body: { orderId },
+    });
 
+  console.log("new-order-notify data:", notifyData);
+  console.log("new-order-notify error:", notifyError);
+
+  if (notifyError) {
+    toast.error("Mail bildirimi gönderilemedi");
+    console.error("Mail bildirimi gönderilemedi:", notifyError);
+  } else {
+    console.log("Mail bildirimi function çağrısı başarılı");
+  }
+} catch (err) {
+  console.error("Function invoke patladı:", err);
+  toast.error("Mail function çağrısında hata oluştu");
+}
 setSubmitted(true);
 toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
     } catch (err: any) {
