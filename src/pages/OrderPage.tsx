@@ -68,7 +68,8 @@ const OrderPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-
+  const [prefillLoading, setPrefillLoading] = useState(true);
+  
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -82,6 +83,48 @@ const OrderPage = () => {
     quantity: "1",
     notes: "",
   });
+
+  useEffect(() => {
+  const loadProfileData = async () => {
+    setPrefillLoading(true);
+
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) throw userError;
+
+      if (!user) {
+        setPrefillLoading(false);
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("full_name, phone, address, email")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+
+      setForm((prev) => ({
+        ...prev,
+        name: prev.name || profile?.full_name || "",
+        email: prev.email || profile?.email || user.email || "",
+        phone: prev.phone || profile?.phone || "",
+        address: prev.address || profile?.address || "",
+      }));
+    } catch (error: any) {
+      console.error("Profil bilgileri yüklenemedi:", error);
+    } finally {
+      setPrefillLoading(false);
+    }
+  };
+
+  loadProfileData();
+}, []);
 
   const disabledSlots = useMemo(() => {
     return getDisabledSlots(date);
@@ -375,36 +418,39 @@ const OrderPage = () => {
                   <div className="space-y-2">
                     <Label htmlFor="name">Ad Soyad *</Label>
                     <Input
-                      id="name"
-                      placeholder="Ahmet Yılmaz"
-                      value={form.name}
-                      onChange={(e) => updateField("name", e.target.value)}
-                      required
-                    />
+  id="name"
+  placeholder="Ahmet Yılmaz"
+  value={form.name}
+  onChange={(e) => updateField("name", e.target.value)}
+  required
+  disabled={prefillLoading}
+/>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">E-posta Adresi *</Label>
                     <Input
-                      id="email"
-                      type="email"
-                      placeholder="ahmet@ornek.com"
-                      value={form.email}
-                      onChange={(e) => updateField("email", e.target.value)}
-                      required
-                    />
+  id="email"
+  type="email"
+  placeholder="ahmet@ornek.com"
+  value={form.email}
+  onChange={(e) => updateField("email", e.target.value)}
+  required
+  disabled={prefillLoading}
+/>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="phone">Telefon Numarası *</Label>
                   <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="+90 555 123 4567"
-                    value={form.phone}
-                    onChange={(e) => updateField("phone", e.target.value)}
-                    required
-                  />
+  id="phone"
+  type="tel"
+  placeholder="+90 555 123 4567"
+  value={form.phone}
+  onChange={(e) => updateField("phone", e.target.value)}
+  required
+  disabled={prefillLoading}
+/>
                 </div>
 
                 <div className="grid sm:grid-cols-3 gap-4">
@@ -483,13 +529,14 @@ const OrderPage = () => {
                 <div className="space-y-2">
                   <Label htmlFor="address">Açık Adres *</Label>
                   <Textarea
-                    id="address"
-                    placeholder="Sokak, bina no, daire no vb."
-                    value={form.address}
-                    onChange={(e) => updateField("address", e.target.value)}
-                    required
-                    rows={2}
-                  />
+  id="address"
+  placeholder="Sokak, bina no, daire no vb."
+  value={form.address}
+  onChange={(e) => updateField("address", e.target.value)}
+  required
+  rows={2}
+  disabled={prefillLoading}
+/>
                 </div>
               </div>
 
