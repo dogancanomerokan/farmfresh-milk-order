@@ -254,7 +254,7 @@ const OrderPage = () => {
           ilce: form.ilce,
           mahalle: form.mahalle || null,
           address: form.address,
-          delivery_date: date.toISOString().split("T")[0],
+          delivery_date: format(date, "yyyy-MM-dd"),
           time_slot: form.timeSlot,
           notes: form.notes || null,
           status: "pending",
