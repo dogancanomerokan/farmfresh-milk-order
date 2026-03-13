@@ -1,53 +1,96 @@
-// Teslimat bölgeleri yardımcı modülü — localStorage tabanlı
+import { supabase } from "@/lib/supabaseClient";
 
 export interface DeliveryZone {
   id: string;
   il: string;
   ilce: string;
-  mahalleler: string[]; // boş ise tüm mahalleler kabul edilir
+  mahalleler: string[];
+  is_active?: boolean;
+  created_at?: string;
 }
 
-const STORAGE_KEY = "delivery-zones";
+export const getDeliveryZones = async (): Promise<DeliveryZone[]> => {
+  const { data, error } = await supabase
+    .from("delivery_zones")
+    .select("*")
+    .eq("is_active", true)
+    .order("il", { ascending: true })
+    .order("ilce", { ascending: true });
 
-export const getDeliveryZones = (): DeliveryZone[] => {
-  return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  if (error) {
+    console.error("Teslimat bölgeleri alınamadı:", error.message);
+    return [];
+  }
+
+  return data || [];
 };
 
-export const saveDeliveryZones = (zones: DeliveryZone[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(zones));
+export const addDeliveryZone = async (
+  zone: Omit<DeliveryZone, "id" | "is_active" | "created_at">
+): Promise<DeliveryZone | null> => {
+  const { data, error } = await supabase
+    .from("delivery_zones")
+    .insert({
+      il: zone.il,
+      ilce: zone.ilce,
+      mahalleler: zone.mahalleler || [],
+      is_active: true,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Teslimat bölgesi eklenemedi:", error.message);
+    return null;
+  }
+
+  return data;
 };
 
-export const addDeliveryZone = (zone: Omit<DeliveryZone, "id">): DeliveryZone => {
-  const zones = getDeliveryZones();
-  const newZone = { ...zone, id: crypto.randomUUID() };
-  zones.push(newZone);
-  saveDeliveryZones(zones);
-  return newZone;
+export const removeDeliveryZone = async (id: string): Promise<boolean> => {
+  const { error } = await supabase
+    .from("delivery_zones")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("Teslimat bölgesi silinemedi:", error.message);
+    return false;
+  }
+
+  return true;
 };
 
-export const removeDeliveryZone = (id: string) => {
-  const zones = getDeliveryZones().filter((z) => z.id !== id);
-  saveDeliveryZones(zones);
-};
+export const isAddressAllowed = async (
+  il: string,
+  ilce: string,
+  mahalle: string
+): Promise<boolean> => {
+  const zones = await getDeliveryZones();
 
-export const isAddressAllowed = (il: string, ilce: string, mahalle: string): boolean => {
-  const zones = getDeliveryZones();
-  if (zones.length === 0) return true; // bölge tanımlanmamışsa her yer kabul
+  if (zones.length === 0) return false;
+
   return zones.some((z) => {
     if (z.il.toLowerCase() !== il.toLowerCase()) return false;
     if (z.ilce.toLowerCase() !== ilce.toLowerCase()) return false;
-    if (z.mahalleler.length === 0) return true; // tüm mahalleler
-    return z.mahalleler.some((m) => m.toLowerCase() === mahalle.toLowerCase());
+    if (!z.mahalleler || z.mahalleler.length === 0) return true;
+
+    return z.mahalleler.some(
+      (m) => m.toLowerCase() === (mahalle || "").toLowerCase()
+    );
   });
 };
 
-// Admin panelde kullanmak için benzersiz il ve ilçe listesi
-export const getUniqueIller = (): string[] => {
-  const zones = getDeliveryZones();
-  return [...new Set(zones.map((z) => z.il))];
+export const getUniqueIller = async (): Promise<string[]> => {
+  const zones = await getDeliveryZones();
+  return [...new Set(zones.map((z) => z.il))].sort((a, b) =>
+    a.localeCompare(b, "tr")
+  );
 };
 
-export const getIlcelerByIl = (il: string): string[] => {
-  const zones = getDeliveryZones();
-  return [...new Set(zones.filter((z) => z.il === il).map((z) => z.ilce))];
+export const getIlcelerByIl = async (il: string): Promise<string[]> => {
+  const zones = await getDeliveryZones();
+  return [...new Set(zones.filter((z) => z.il === il).map((z) => z.ilce))].sort(
+    (a, b) => a.localeCompare(b, "tr")
+  );
 };
