@@ -485,7 +485,7 @@ toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
                   <div className="space-y-2">
                     <Label>İl *</Label>
                     <Select value={form.il} onValueChange={(v) => updateField("il", v)}>
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="İl seçin" />
                       </SelectTrigger>
                      <SelectContent className="z-[100]">
@@ -505,7 +505,7 @@ toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
                       onValueChange={(v) => updateField("ilce", v)}
                       disabled={!form.il}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="İlçe seçin" />
                       </SelectTrigger>
                      <SelectContent className="z-[100]">
@@ -525,7 +525,7 @@ toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
                       onValueChange={(v) => updateField("mahalle", v)}
                       disabled={!form.ilce || availableMahalleler.length === 0}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue
                           placeholder={
                             !form.ilce
