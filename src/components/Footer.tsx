@@ -26,8 +26,8 @@ const Footer = () => {
 
               <span className="font-medium">Adres</span>
               <span>
-                : Mimar Sinan Mah., Özgürlük Cad.<br/>
-                 7087. Sok. No:7/A, Silivri/İstanbul
+                : Akören Mahallesi, Merkez Caddesi, <br/>
+                  Silivri/İstanbul
               </span>
 
               <span className="font-medium">Telefon</span>
