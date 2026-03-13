@@ -136,9 +136,14 @@ const OrderPage = () => {
     }
   }, [date, form.timeSlot, disabledSlots]);
 
-  useEffect(() => {
-    setZones(getDeliveryZones());
-  }, []);
+ useEffect(() => {
+  const loadZones = async () => {
+    const data = await getDeliveryZones();
+    setZones(data);
+  };
+
+  loadZones();
+}, []);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -253,11 +258,17 @@ const availableIlceler = hasZones
       return;
     }
 
-    if (hasZones && !isAddressAllowed(form.il, form.ilce, form.mahalle)) {
-      setAddressWarning("Seçtiğiniz bölgeye teslimat yapılmamaktadır.");
-      toast.error("Bu bölgeye teslimat yapılmamaktadır");
-      return;
-    }
+   const addressAllowed = await isAddressAllowed(
+  form.il,
+  form.ilce,
+  form.mahalle
+);
+
+if (hasZones && !addressAllowed) {
+  setAddressWarning("Seçtiğiniz bölgeye teslimat yapılmamaktadır.");
+  toast.error("Bu bölgeye teslimat yapılmamaktadır");
+  return;
+}
 
     if (!selectedProduct) {
       toast.error("Lütfen bir ürün seçin");
