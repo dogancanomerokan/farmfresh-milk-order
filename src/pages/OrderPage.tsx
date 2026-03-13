@@ -485,65 +485,65 @@ toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
                   <div className="space-y-2">
                     <Label>İl *</Label>
                     <Select value={form.il} onValueChange={(v) => updateField("il", v)}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="İl seçin" />
-                      </SelectTrigger>
-                     <SelectContent className="z-[100]">
-                        {availableIller.map((il) => (
-                          <SelectItem key={il} value={il}>
-                            {il}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+  <SelectTrigger className="w-full">
+    <SelectValue placeholder="İl seçin" />
+  </SelectTrigger>
+  <SelectContent className="z-[100]">
+    {availableIller.map((il) => (
+      <SelectItem key={il} value={il}>
+        {il}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
                   </div>
 
                   <div className="space-y-2">
                     <Label>İlçe *</Label>
-                    <Select
-                      value={form.ilce}
-                      onValueChange={(v) => updateField("ilce", v)}
-                      disabled={!form.il}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="İlçe seçin" />
-                      </SelectTrigger>
-                     <SelectContent className="z-[100]">
-                        {availableIlceler.map((ilce) => (
-                          <SelectItem key={ilce} value={ilce}>
-                            {ilce}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                   <Select
+  value={form.ilce}
+  onValueChange={(v) => updateField("ilce", v)}
+  disabled={!form.il}
+>
+  <SelectTrigger className="w-full">
+    <SelectValue placeholder="İlçe seçin" />
+  </SelectTrigger>
+  <SelectContent className="z-[100]">
+    {availableIlceler.map((ilce) => (
+      <SelectItem key={ilce} value={ilce}>
+        {ilce}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
                   </div>
 
                   <div className="space-y-2">
                     <Label>Mahalle *</Label>
-                    <Select
-                      value={form.mahalle}
-                      onValueChange={(v) => updateField("mahalle", v)}
-                      disabled={!form.ilce || availableMahalleler.length === 0}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue
-                          placeholder={
-                            !form.ilce
-                              ? "Önce ilçe seçin"
-                              : availableMahalleler.length === 0
-                              ? "Mahalle verisi yok"
-                              : "Mahalle seçin"
-                          }
-                        />
-                      </SelectTrigger>
-                     <SelectContent className="z-[100]">
-                        {availableMahalleler.map((m) => (
-                          <SelectItem key={m} value={m}>
-                            {m}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                   <Select
+  value={form.mahalle}
+  onValueChange={(v) => updateField("mahalle", v)}
+  disabled={!form.ilce || availableMahalleler.length === 0}
+>
+  <SelectTrigger className="w-full">
+    <SelectValue
+      placeholder={
+        !form.ilce
+          ? "Önce ilçe seçin"
+          : availableMahalleler.length === 0
+          ? "Mahalle verisi yok"
+          : "Mahalle seçin"
+      }
+    />
+  </SelectTrigger>
+  <SelectContent className="z-[100]">
+    {availableMahalleler.map((m) => (
+      <SelectItem key={m} value={m}>
+        {m}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
                   </div>
                 </div>
 
