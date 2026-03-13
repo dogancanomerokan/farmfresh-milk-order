@@ -26,7 +26,7 @@ const Footer = () => {
 
               <span className="font-medium">Adres</span>
               <span>
-                : Akören Mahallesi, Merkez Caddesi, <br/>
+                : Akören Mah. Merkez Cad. <br/>
                   Silivri/İstanbul
               </span>
 
