@@ -241,11 +241,13 @@ const availableIlceler = hasZones
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-const normalizedEmail = String(email || "").trim().toLowerCase();
+const normalizedEmail = String(form.email || "").trim().toLowerCase();
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const cleanedEmail = normalizedEmail.replace(/\s+/g, "");
 
-if (!emailRegex.test(normalizedEmail)) {
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+if (!emailRegex.test(cleanedEmail)) {
   toast.error("Geçerli bir e-posta adresi giriniz");
   return;
 }
@@ -481,9 +483,26 @@ toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
   placeholder="ahmet@ornek.com"
   value={form.email}
   onChange={(e) => updateField("email", e.target.value)}
+  onBlur={() =>
+    updateField(
+      "email",
+      String(form.email || "")
+        .replace(/\u200B/g, "")
+        .replace(/\u00A0/g, " ")
+        .trim()
+        .replace(/\s+/g, "")
+        .toLowerCase()
+    )
+  }
+  autoComplete="email"
+  inputMode="email"
+  autoCapitalize="none"
+  autoCorrect="off"
+  spellCheck={false}
   required
   disabled={prefillLoading}
 />
+                    
                   </div>
                 </div>
 
