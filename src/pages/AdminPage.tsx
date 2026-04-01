@@ -260,6 +260,83 @@ const AdminPage = () => {
     }
   };
 
+  const handleSendPasswordReset = async (targetEmail: string) => {
+    const normalizedEmail = String(targetEmail || "").trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      toast.error("E-posta bulunamadı");
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      normalizedEmail,
+      {
+        redirectTo: `${window.location.origin}/reset-password`,
+      }
+    );
+
+    if (error) {
+      const msg = String(error.message || "").toLowerCase();
+
+      if (msg.includes("rate limit")) {
+        toast.error("Çok sık denendi, biraz sonra tekrar deneyin");
+        return;
+      }
+
+      toast.error(error.message || "Şifre sıfırlama maili gönderilemedi");
+      return;
+    }
+
+    toast.success("Şifre sıfırlama maili gönderildi");
+  };
+
+  const handleResendVerification = async (targetEmail: string) => {
+    const normalizedEmail = String(targetEmail || "").trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      toast.error("E-posta bulunamadı");
+      return;
+    }
+
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: normalizedEmail,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      const msg = String(error.message || "").toLowerCase();
+
+      if (
+        msg.includes("already confirmed") ||
+        msg.includes("already verified") ||
+        msg.includes("user already confirmed")
+      ) {
+        toast.error("Bu kullanıcı zaten e-posta adresini doğrulamış");
+        return;
+      }
+
+      if (msg.includes("rate limit")) {
+        toast.error("Çok sık denendi, biraz sonra tekrar deneyin");
+        return;
+      }
+
+      if (msg.includes("user not found") || msg.includes("not found")) {
+        toast.error("Bu e-posta adresine ait kullanıcı bulunamadı");
+        return;
+      }
+
+      toast.error(error.message || "Doğrulama maili gönderilemedi");
+      return;
+    }
+
+    toast.success(
+      "Doğrulama e-postası gönderildi. Hesap zaten doğrulanmışsa bu işlem etkisiz olabilir."
+    );
+  };
+
   const filteredCustomers = useMemo(() => {
     const q = customerQuery.trim().toLowerCase();
 
@@ -484,14 +561,14 @@ const AdminPage = () => {
                       </p>
                     </div>
 
-                    <div className="flex flex-col md:flex-row gap-2 md:items-center">
+                    <div className="flex flex-wrap gap-2 items-center">
                       <Select
                         value={admin.role}
                         onValueChange={(v) =>
                           updateAdminRole(admin.id, v as AdminRole)
                         }
                       >
-                        <SelectTrigger className="w-[180px]">
+                        <SelectTrigger className="w-[160px]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -506,11 +583,28 @@ const AdminPage = () => {
 
                       <Button
                         variant={admin.is_active ? "outline" : "default"}
+                        size="sm"
                         onClick={() =>
                           toggleAdminActive(admin.id, admin.is_active)
                         }
                       >
                         {admin.is_active ? "Pasife Al" : "Aktif Et"}
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSendPasswordReset(admin.email)}
+                      >
+                        Şifre
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleResendVerification(admin.email)}
+                      >
+                        Doğrula
                       </Button>
                     </div>
                   </div>
