@@ -20,12 +20,22 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const getNormalizedEmail = () => String(email || "").trim().toLowerCase();
+  const getNormalizedEmail = () =>
+  String(email ?? "")
+    .replace(/\u200B/g, "")
+    .replace(/\u00A0/g, " ")
+    .trim()
+    .toLowerCase();
 
-  const isValidEmail = (value: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(value);
-  };
+const isValidEmail = (value: string) => {
+  if (!value) return false;
+
+  // aradaki tüm boşlukları temizle
+  const cleaned = value.replace(/\s+/g, "");
+
+  // çok katı olmayan, mobilde daha sorunsuz kontrol
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(cleaned);
+};
 
   const handleResendVerification = async () => {
     setError("");
