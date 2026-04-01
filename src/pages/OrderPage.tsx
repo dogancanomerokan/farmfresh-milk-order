@@ -240,7 +240,15 @@ const availableIlceler = hasZones
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+const normalizedEmail = String(email || "").trim().toLowerCase();
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+if (!emailRegex.test(normalizedEmail)) {
+  toast.error("Geçerli bir e-posta adresi giriniz");
+  return;
+}
        if (submitting) return;
 
     if (
