@@ -15,6 +15,7 @@ import DispatchPage from "./pages/DispatchPage";
 import OrderManagePage from "./pages/OrderManagePage";
 import CustomerManagementPage from "./pages/CustomerManagementPage";
 import NotFound from "./pages/NotFound";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/order-manage" element={<OrderManagePage />} />
             <Route path="/admincustomers" element={<CustomerManagementPage />} />
             <Route path="*" element={<NotFound />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
           </Routes>
 
         </AuthProvider>
