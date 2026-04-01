@@ -20,10 +20,49 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  
+  const getNormalizedEmail = () => String(email || "").trim().toLowerCase();
+
+  const isValidEmail = (value: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(value);
+  };
+
+  const handleResendVerification = async () => {
+    setError("");
+
+    const normalizedEmail = getNormalizedEmail();
+
+    if (!isValidEmail(normalizedEmail)) {
+      setError("Lütfen geçerli bir e-posta adresi girin");
+      return;
+    }
+
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: normalizedEmail,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      setError(error.message || "Doğrulama e-postası tekrar gönderilemedi");
+      return;
+    }
+
+    toast.success("Doğrulama e-postası tekrar gönderildi");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    const normalizedEmail = getNormalizedEmail();
+
+    if (!isValidEmail(normalizedEmail)) {
+      setError("Geçerli bir e-posta adresi giriniz");
+      return;
+    }
 
     if (password.length < 6) {
       setError("Şifre en az 6 karakter olmalıdır");
@@ -39,10 +78,10 @@ const RegisterPage = () => {
 
     try {
       const { error } = await supabase.auth.signUp({
-        email,
+        email: normalizedEmail,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/login`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             full_name: name,
             phone: phone || null,
@@ -67,15 +106,23 @@ const RegisterPage = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-24 pb-20 flex items-center justify-center min-h-[80vh] px-4">
-        <div className="w-full max-w-md bg-card rounded-2xl p-8" style={{ boxShadow: "var(--shadow-elevated)" }}>
+        <div
+          className="w-full max-w-md bg-card rounded-2xl p-6 sm:p-8"
+          style={{ boxShadow: "var(--shadow-elevated)" }}
+        >
           <div className="text-center mb-8">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
               <UserPlus className="h-7 w-7 text-primary" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
+            <h1
+              className="text-2xl font-bold text-foreground"
+              style={{ fontFamily: "var(--font-heading)" }}
+            >
               Kayıt Ol
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">Yeni hesap oluşturun</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Yeni hesap oluşturun
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -86,6 +133,7 @@ const RegisterPage = () => {
                 placeholder="Adınız Soyadınız"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                autoComplete="name"
                 required
               />
             </div>
@@ -98,6 +146,8 @@ const RegisterPage = () => {
                 placeholder="ornek@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                inputMode="email"
                 required
               />
             </div>
@@ -112,6 +162,7 @@ const RegisterPage = () => {
                 placeholder="05XX XXX XX XX"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
+                autoComplete="tel"
               />
             </div>
 
@@ -124,6 +175,7 @@ const RegisterPage = () => {
                   placeholder="En az 6 karakter"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
                   required
                 />
                 <button
@@ -131,7 +183,11 @@ const RegisterPage = () => {
                   onClick={() => setShowPw(!showPw)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPw ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
@@ -144,8 +200,19 @@ const RegisterPage = () => {
                 placeholder="Şifrenizi tekrar girin"
                 value={confirmPw}
                 onChange={(e) => setConfirmPw(e.target.value)}
+                autoComplete="new-password"
                 required
               />
+            </div>
+
+            <div className="flex justify-start">
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                className="text-xs sm:text-sm text-primary font-medium hover:underline text-left"
+              >
+                Doğrulama mailini tekrar gönder
+              </button>
             </div>
 
             {error && (
@@ -161,7 +228,10 @@ const RegisterPage = () => {
 
           <p className="text-center text-sm text-muted-foreground mt-6">
             Zaten hesabınız var mı?{" "}
-            <Link to="/login" className="text-primary font-semibold hover:underline">
+            <Link
+              to="/login"
+              className="text-primary font-semibold hover:underline"
+            >
               Giriş Yap
             </Link>
           </p>
