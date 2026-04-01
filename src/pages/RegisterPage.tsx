@@ -205,15 +205,7 @@ const RegisterPage = () => {
               />
             </div>
 
-            <div className="flex justify-start">
-              <button
-                type="button"
-                onClick={handleResendVerification}
-                className="text-xs sm:text-sm text-primary font-medium hover:underline text-left"
-              >
-                Doğrulama mailini tekrar gönder
-              </button>
-            </div>
+   
 
             {error && (
               <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">
