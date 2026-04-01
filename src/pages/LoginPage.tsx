@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LogIn, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -24,13 +26,81 @@ const LoginPage = () => {
     }
   }, [user, isLoading, navigate]);
 
+  const getNormalizedEmail = () => String(email || "").trim().toLowerCase();
+
+  const isValidEmail = (value: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(value);
+  };
+
+  const handleForgotPassword = async () => {
+    setError("");
+
+    const normalizedEmail = getNormalizedEmail();
+
+    if (!isValidEmail(normalizedEmail)) {
+      setError("Lütfen geçerli bir e-posta adresi girin");
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+      redirectTo: "https://www.sadesut.com/reset-password",
+    });
+
+    if (error) {
+      setError(error.message || "Şifre sıfırlama bağlantısı gönderilemedi");
+      return;
+    }
+
+    toast.success("Şifre sıfırlama linki e-posta adresinize gönderildi");
+  };
+
+  const handleResendVerification = async () => {
+    setError("");
+
+    const normalizedEmail = getNormalizedEmail();
+
+    if (!isValidEmail(normalizedEmail)) {
+      setError("Lütfen geçerli bir e-posta adresi girin");
+      return;
+    }
+
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: normalizedEmail,
+      options: {
+        emailRedirectTo: "https://www.sadesut.com/auth/callback",
+      },
+    });
+
+    if (error) {
+      setError(error.message || "Doğrulama e-postası tekrar gönderilemedi");
+      return;
+    }
+
+    toast.success("Doğrulama e-postası tekrar gönderildi");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    const normalizedEmail = getNormalizedEmail();
+
+    if (!isValidEmail(normalizedEmail)) {
+      setError("Geçerli bir e-posta adresi giriniz");
+      return;
+    }
+
+    if (!password.trim()) {
+      setError("Şifre alanı boş bırakılamaz");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(normalizedEmail, password);
       navigate("/member", { replace: true });
     } catch (err: any) {
       setError(err.message || "Giriş sırasında bir hata oluştu");
@@ -54,21 +124,24 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+
       <div className="pt-24 pb-20 flex items-center justify-center min-h-[80vh] px-4">
         <div
-          className="w-full max-w-md bg-card rounded-2xl p-8"
+          className="w-full max-w-md bg-card rounded-2xl p-6 sm:p-8"
           style={{ boxShadow: "var(--shadow-elevated)" }}
         >
           <div className="text-center mb-8">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
               <LogIn className="h-7 w-7 text-primary" />
             </div>
+
             <h1
               className="text-2xl font-bold text-foreground"
               style={{ fontFamily: "var(--font-heading)" }}
             >
               Giriş Yap
             </h1>
+
             <p className="text-sm text-muted-foreground mt-1">
               Hesabınıza giriş yapın
             </p>
@@ -83,12 +156,25 @@ const LoginPage = () => {
                 placeholder="ornek@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                inputMode="email"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Şifre</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="password">Şifre</Label>
+
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-xs sm:text-sm text-primary font-medium hover:underline"
+                >
+                  Şifremi unuttum
+                </button>
+              </div>
+
               <div className="relative">
                 <Input
                   id="password"
@@ -96,6 +182,7 @@ const LoginPage = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
                   required
                 />
                 <button
@@ -110,6 +197,16 @@ const LoginPage = () => {
                   )}
                 </button>
               </div>
+            </div>
+
+            <div className="flex justify-start">
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                className="text-xs sm:text-sm text-primary font-medium hover:underline text-left"
+              >
+                Doğrulama mailini tekrar gönder
+              </button>
             </div>
 
             {error && (
@@ -134,6 +231,7 @@ const LoginPage = () => {
           </p>
         </div>
       </div>
+
       <Footer />
     </div>
   );
