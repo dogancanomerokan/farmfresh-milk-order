@@ -241,6 +241,11 @@ const availableIlceler = hasZones
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!email.includes("@") || email.length < 5) {
+  toast.error("Geçerli bir e-posta giriniz");
+  return;
+}
+    
     if (submitting) return;
 
     if (
