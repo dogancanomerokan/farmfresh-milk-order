@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -17,7 +17,32 @@ const ResetPasswordPage = () => {
   const [showPw, setShowPw] = useState(false);
   const [showPwRepeat, setShowPwRepeat] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const prepareResetSession = async () => {
+      try {
+        const hash = window.location.hash || "";
+        const search = window.location.search || "";
+
+        if (
+          hash.includes("access_token") ||
+          hash.includes("refresh_token") ||
+          search.includes("code=") ||
+          search.includes("type=recovery")
+        ) {
+          await supabase.auth.getSession();
+        }
+      } catch (err) {
+        console.error("Reset session hazırlanamadı:", err);
+      } finally {
+        setPageLoading(false);
+      }
+    };
+
+    prepareResetSession();
+  }, []);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +85,18 @@ const ResetPasswordPage = () => {
       setLoading(false);
     }
   };
+
+  if (pageLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="pt-24 pb-20 px-4 flex items-center justify-center min-h-[70vh]">
+          <p className="text-sm text-muted-foreground">Yükleniyor...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -106,11 +143,7 @@ const ResetPasswordPage = () => {
                     onClick={() => setShowPw(!showPw)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
-                    {showPw ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                    {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
@@ -132,11 +165,7 @@ const ResetPasswordPage = () => {
                     onClick={() => setShowPwRepeat(!showPwRepeat)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
-                    {showPwRepeat ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                    {showPwRepeat ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
