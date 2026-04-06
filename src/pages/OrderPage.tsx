@@ -70,19 +70,25 @@ const OrderPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(true);
   
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    il: "",
-    ilce: "",
-    mahalle: "",
-    address: "",
-    product: "",
-    timeSlot: "",
-    quantity: "1",
-    notes: "",
-  });
+const [form, setForm] = useState({
+  name: "",
+  email: "",
+  phone: "",
+  il: "",
+  ilce: "",
+  mahalle: "",
+  address: "",
+  product: "",
+  quantity: "1",
+
+  // ✅ YENİ
+  product2: "",
+  quantity2: "1",
+
+  deliveryDate: "",
+  timeSlot: "",
+  notes: "",
+});
 
   useEffect(() => {
   const loadProfileData = async () => {
@@ -237,7 +243,11 @@ const availableIlceler = hasZones
   };
 
   const selectedProduct = products.find((p) => String(p.id) === String(form.product));
-
+  
+const selectedProduct2 = products.find(
+  (p) => String(p.id) === String(form.product2)
+);
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
