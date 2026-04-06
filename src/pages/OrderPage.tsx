@@ -79,12 +79,9 @@ const [form, setForm] = useState({
   mahalle: "",
   address: "",
   product: "",
-  quantity: "1",
-
-  // ✅ YENİ
   product2: "",
+  quantity: "1",
   quantity2: "1",
-
   deliveryDate: "",
   timeSlot: "",
   notes: "",
@@ -224,24 +221,32 @@ const availableIlceler = hasZones
   }, [form.ilce, form.mahalle, availableMahalleler, showMahalle]);
 
   const updateField = (field: string, value: string) => {
-    setForm((prev) => {
-      const next = { ...prev, [field]: value };
+  setForm((prev) => {
+    const normalizedValue =
+      field === "product2" && value === "__none__" ? "" : value;
 
-      if (field === "il") {
-        next.ilce = "";
-        next.mahalle = "";
-      }
+    const next = { ...prev, [field]: normalizedValue };
 
-      if (field === "ilce") {
-        next.mahalle = "";
-      }
+    if (field === "il") {
+      next.ilce = "";
+      next.mahalle = "";
+    }
 
-      return next;
-    });
+    if (field === "ilce") {
+      next.mahalle = "";
+    }
 
-    setAddressWarning("");
-  };
+    if (field === "product" && !normalizedValue) {
+      next.product2 = "";
+      next.quantity2 = "1";
+    }
 
+    return next;
+  });
+
+  setAddressWarning("");
+};
+  
   const selectedProduct = products.find((p) => String(p.id) === String(form.product));
   
 const selectedProduct2 = products.find(
