@@ -671,9 +671,9 @@ toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
 {/* 🔥 2. Ürün (opsiyonel) */}
 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
   <div>
-    <Label>2. Ürün (opsiyonel)</Label>
+    <Label>2. Ürün (Opsiyonel)</Label>
     <Select
-      value={form.product2}
+      value={form.product}
       onValueChange={(value) => updateField("product2", value)}
     >
       <SelectTrigger>
