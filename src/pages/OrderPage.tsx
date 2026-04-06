@@ -673,7 +673,7 @@ toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
   <div>
     <Label>2. Ürün (Opsiyonel)</Label>
     <Select
-      value={form.product}
+      value={form.product2}
       onValueChange={(value) => updateField("product2", value)}
     >
       <SelectTrigger>
@@ -681,9 +681,9 @@ toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
       </SelectTrigger>
       <SelectContent>
         {products.map((product) => (
-          <SelectItem key={product.id} value={String(product.id)}>
-            {product.name}
-          </SelectItem>
+         <SelectItem key={p.id} value={String(p.id)}>
+                              {p.name} - {p.Volume} {p.unit} / {p.price} TL
+                            </SelectItem>
         ))}
       </SelectContent>
     </Select>
