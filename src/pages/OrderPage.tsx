@@ -667,7 +667,48 @@ toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
                     </Select>
                   </div>
                 </div>
+                
+{/* 🔥 2. Ürün (opsiyonel) */}
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <div>
+    <Label>Ürün (2. seçenek - opsiyonel)</Label>
+    <Select
+      value={form.product2}
+      onValueChange={(value) => updateField("product2", value)}
+    >
+      <SelectTrigger>
+        <SelectValue placeholder="Ürün seçin" />
+      </SelectTrigger>
+      <SelectContent>
+        {products.map((product) => (
+          <SelectItem key={product.id} value={String(product.id)}>
+            {product.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
 
+  <div>
+    <Label>Adet</Label>
+    <Select
+      value={form.quantity2}
+      onValueChange={(value) => updateField("quantity2", value)}
+    >
+      <SelectTrigger>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {[1,2,3,4,5,6,7,8,9,10].map((n) => (
+          <SelectItem key={n} value={String(n)}>
+            {n}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+</div>
+                
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Teslimat Tarihi *</Label>
