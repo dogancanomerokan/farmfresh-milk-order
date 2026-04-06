@@ -15,7 +15,6 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import OrderSummary from "@/components/OrderSummary";
 import { getDeliveryZones, isAddressAllowed, DeliveryZone } from "@/lib/delivery-zones";
-import { getIller, getIlceler } from "@/lib/turkey-data";
 import { getMahalleler } from "@/lib/mahalle-data";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -69,65 +68,65 @@ const OrderPage = () => {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(true);
-  
-const [form, setForm] = useState({
-  name: "",
-  email: "",
-  phone: "",
-  il: "",
-  ilce: "",
-  mahalle: "",
-  address: "",
-  product: "",
-  product2: "",
-  quantity: "1",
-  quantity2: "1",
-  deliveryDate: "",
-  timeSlot: "",
-  notes: "",
-});
+
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    il: "",
+    ilce: "",
+    mahalle: "",
+    address: "",
+    product: "",
+    product2: "",
+    quantity: "1",
+    quantity2: "1",
+    deliveryDate: "",
+    timeSlot: "",
+    notes: "",
+  });
 
   useEffect(() => {
-  const loadProfileData = async () => {
-    setPrefillLoading(true);
+    const loadProfileData = async () => {
+      setPrefillLoading(true);
 
-    try {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-      if (userError) throw userError;
+        if (userError) throw userError;
 
-      if (!user) {
+        if (!user) {
+          setPrefillLoading(false);
+          return;
+        }
+
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("full_name, phone, address, email")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileError) throw profileError;
+
+        setForm((prev) => ({
+          ...prev,
+          name: prev.name || profile?.full_name || "",
+          email: prev.email || profile?.email || user.email || "",
+          phone: prev.phone || profile?.phone || "",
+          address: prev.address || profile?.address || "",
+        }));
+      } catch (error: any) {
+        console.error("Profil bilgileri yüklenemedi:", error);
+      } finally {
         setPrefillLoading(false);
-        return;
       }
+    };
 
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("full_name, phone, address, email")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (profileError) throw profileError;
-
-      setForm((prev) => ({
-        ...prev,
-        name: prev.name || profile?.full_name || "",
-        email: prev.email || profile?.email || user.email || "",
-        phone: prev.phone || profile?.phone || "",
-        address: prev.address || profile?.address || "",
-      }));
-    } catch (error: any) {
-      console.error("Profil bilgileri yüklenemedi:", error);
-    } finally {
-      setPrefillLoading(false);
-    }
-  };
-
-  loadProfileData();
-}, []);
+    loadProfileData();
+  }, []);
 
   const disabledSlots = useMemo(() => {
     return getDisabledSlots(date);
@@ -139,14 +138,14 @@ const [form, setForm] = useState({
     }
   }, [date, form.timeSlot, disabledSlots]);
 
- useEffect(() => {
-  const loadZones = async () => {
-    const data = await getDeliveryZones();
-    setZones(data);
-  };
+  useEffect(() => {
+    const loadZones = async () => {
+      const data = await getDeliveryZones();
+      setZones(data);
+    };
 
-  loadZones();
-}, []);
+    loadZones();
+  }, []);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -176,21 +175,13 @@ const [form, setForm] = useState({
 
   const hasZones = zones.length > 0;
 
-//  const availableIller = hasZones
-//    ? [...new Set(zones.map((z) => z.il))].sort((a, b) => a.localeCompare(b, "tr"))
-//   : getIller();
-
- // const availableIlceler = hasZones
-//    ? [...new Set(zones.filter((z) => z.il === form.il).map((z) => z.ilce))].sort((a, b) => a.localeCompare(b, "tr"))
-//    : getIlceler(form.il);
-
   const availableIller = hasZones
-  ? [...new Set(zones.map((z) => z.il))].sort((a, b) => a.localeCompare(b, "tr"))
-  : [];
+    ? [...new Set(zones.map((z) => z.il))].sort((a, b) => a.localeCompare(b, "tr"))
+    : [];
 
-const availableIlceler = hasZones
-  ? [...new Set(zones.filter((z) => z.il === form.il).map((z) => z.ilce))].sort((a, b) => a.localeCompare(b, "tr"))
-  : [];
+  const availableIlceler = hasZones
+    ? [...new Set(zones.filter((z) => z.il === form.il).map((z) => z.ilce))].sort((a, b) => a.localeCompare(b, "tr"))
+    : [];
 
   const adminMahalleler = hasZones
     ? zones.filter((z) => z.il === form.il && z.ilce === form.ilce).flatMap((z) => z.mahalleler)
@@ -221,52 +212,71 @@ const availableIlceler = hasZones
   }, [form.ilce, form.mahalle, availableMahalleler, showMahalle]);
 
   const updateField = (field: string, value: string) => {
-  setForm((prev) => {
-    const normalizedValue =
-      field === "product2" && value === "__none__" ? "" : value;
+    setForm((prev) => {
+      const normalizedValue =
+        field === "product2" && value === "__none__" ? "" : value;
 
-    const next = { ...prev, [field]: normalizedValue };
+      const next = { ...prev, [field]: normalizedValue };
 
-    if (field === "il") {
-      next.ilce = "";
-      next.mahalle = "";
-    }
+      if (field === "il") {
+        next.ilce = "";
+        next.mahalle = "";
+      }
 
-    if (field === "ilce") {
-      next.mahalle = "";
-    }
+      if (field === "ilce") {
+        next.mahalle = "";
+      }
 
-    if (field === "product" && !normalizedValue) {
-      next.product2 = "";
-      next.quantity2 = "1";
-    }
+      if (field === "product" && !normalizedValue) {
+        next.product2 = "";
+        next.quantity2 = "1";
+      }
 
-    return next;
-  });
+      return next;
+    });
 
-  setAddressWarning("");
-};
-  
+    setAddressWarning("");
+  };
+
   const selectedProduct = products.find((p) => String(p.id) === String(form.product));
-  
-const selectedProduct2 = products.find(
-  (p) => String(p.id) === String(form.product2)
-);
-  
+  const selectedProduct2 = products.find((p) => String(p.id) === String(form.product2));
+
+  const summaryItems = [
+    selectedProduct
+      ? {
+          id: selectedProduct.id,
+          name: selectedProduct.name,
+          Volume: selectedProduct.Volume,
+          unit: selectedProduct.unit,
+          price: selectedProduct.price,
+          quantity: form.quantity,
+        }
+      : null,
+    selectedProduct2
+      ? {
+          id: selectedProduct2.id,
+          name: selectedProduct2.name,
+          Volume: selectedProduct2.Volume,
+          unit: selectedProduct2.unit,
+          price: selectedProduct2.price,
+          quantity: form.quantity2,
+        }
+      : null,
+  ].filter(Boolean);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-const normalizedEmail = String(form.email || "").trim().toLowerCase();
 
-const cleanedEmail = normalizedEmail.replace(/\s+/g, "");
+    const normalizedEmail = String(form.email || "").trim().toLowerCase();
+    const cleanedEmail = normalizedEmail.replace(/\s+/g, "");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!emailRegex.test(cleanedEmail)) {
+      toast.error("Geçerli bir e-posta adresi giriniz");
+      return;
+    }
 
-if (!emailRegex.test(cleanedEmail)) {
-  toast.error("Geçerli bir e-posta adresi giriniz");
-  return;
-}
-       if (submitting) return;
+    if (submitting) return;
 
     if (
       !form.name ||
@@ -283,17 +293,17 @@ if (!emailRegex.test(cleanedEmail)) {
       return;
     }
 
-   const addressAllowed = await isAddressAllowed(
-  form.il,
-  form.ilce,
-  form.mahalle
-);
+    const addressAllowed = await isAddressAllowed(
+      form.il,
+      form.ilce,
+      form.mahalle
+    );
 
-if (hasZones && !addressAllowed) {
-  setAddressWarning("Seçtiğiniz bölgeye teslimat yapılmamaktadır.");
-  toast.error("Bu bölgeye teslimat yapılmamaktadır");
-  return;
-}
+    if (hasZones && !addressAllowed) {
+      setAddressWarning("Seçtiğiniz bölgeye teslimat yapılmamaktadır.");
+      toast.error("Bu bölgeye teslimat yapılmamaktadır");
+      return;
+    }
 
     if (!selectedProduct) {
       toast.error("Lütfen bir ürün seçin");
@@ -326,7 +336,17 @@ if (hasZones && !addressAllowed) {
 
       const quantityNumber = Number(form.quantity || 1);
       const unitPrice = Number(selectedProduct.price || 0);
-      const totalAmount = unitPrice * quantityNumber;
+      const total1 = unitPrice * quantityNumber;
+
+      const quantityNumber2 = selectedProduct2
+        ? Number(form.quantity2 || 1)
+        : 0;
+      const unitPrice2 = selectedProduct2
+        ? Number(selectedProduct2.price || 0)
+        : 0;
+      const total2 = unitPrice2 * quantityNumber2;
+
+      const totalAmount = total1 + total2;
       const orderId = crypto.randomUUID();
 
       const { error: orderError } = await supabase
@@ -352,44 +372,63 @@ if (hasZones && !addressAllowed) {
         throw orderError;
       }
 
-      const { error: itemError } = await supabase.from("order_items").insert({
-  order_id: orderId,
-  product_id: selectedProduct.id,
-  product_name_snapshot: selectedProduct.name,
-  volume_snapshot: selectedProduct.Volume,
-  unit_snapshot: selectedProduct.unit,
-  unit_price: unitPrice,
-  quantity: quantityNumber,
-  line_total: totalAmount,
-});
+      const orderItems = [
+        {
+          order_id: orderId,
+          product_id: selectedProduct.id,
+          product_name_snapshot: selectedProduct.name,
+          volume_snapshot: selectedProduct.Volume,
+          unit_snapshot: selectedProduct.unit,
+          unit_price: unitPrice,
+          quantity: quantityNumber,
+          line_total: total1,
+        },
+      ];
 
-if (itemError) {
-  await supabase.from("orders").delete().eq("id", orderId);
-  throw itemError;
-}
+      if (selectedProduct2) {
+        orderItems.push({
+          order_id: orderId,
+          product_id: selectedProduct2.id,
+          product_name_snapshot: selectedProduct2.name,
+          volume_snapshot: selectedProduct2.Volume,
+          unit_snapshot: selectedProduct2.unit,
+          unit_price: unitPrice2,
+          quantity: quantityNumber2,
+          line_total: total2,
+        });
+      }
 
-try {
-  const { data: notifyData, error: notifyError } =
-    await supabase.functions.invoke("new-order-notify", {
-      body: { orderId },
-    });
+      const { error: itemError } = await supabase
+        .from("order_items")
+        .insert(orderItems);
 
-  console.log("new-order-notify data:", notifyData);
-  console.log("new-order-notify error:", notifyError);
+      if (itemError) {
+        await supabase.from("orders").delete().eq("id", orderId);
+        throw itemError;
+      }
 
-  if (notifyError) {
-    toast.error("Mail bildirimi gönderilemedi");
-    console.error("Mail bildirimi gönderilemedi:", notifyError);
-  } else {
-    console.log("Mail bildirimi function çağrısı başarılı");
-  }
-} catch (err) {
-  console.error("Function invoke patladı:", err);
-  toast.error("Mail function çağrısında hata oluştu");
-}
+      try {
+        const { data: notifyData, error: notifyError } =
+          await supabase.functions.invoke("new-order-notify", {
+            body: { orderId },
+          });
 
-setSubmitted(true);
-toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
+        console.log("new-order-notify data:", notifyData);
+        console.log("new-order-notify error:", notifyError);
+
+        if (notifyError) {
+          toast.error("Mail bildirimi gönderilemedi");
+          console.error("Mail bildirimi gönderilemedi:", notifyError);
+        } else {
+          console.log("Mail bildirimi function çağrısı başarılı");
+        }
+      } catch (err) {
+        console.error("Function invoke patladı:", err);
+        toast.error("Mail function çağrısında hata oluştu");
+      }
+
+      setSubmitted(true);
+      toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
     } catch (err: any) {
       console.error("Sipariş oluşturma hatası:", err);
       toast.error(err.message || "Sipariş oluşturulamadı");
@@ -428,8 +467,11 @@ toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
                   mahalle: "",
                   address: "",
                   product: "",
-                  timeSlot: "",
+                  product2: "",
                   quantity: "1",
+                  quantity2: "1",
+                  deliveryDate: "",
+                  timeSlot: "",
                   notes: "",
                 });
                 setDate(undefined);
@@ -482,121 +524,121 @@ toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
                   <div className="space-y-2">
                     <Label htmlFor="name">Ad Soyad *</Label>
                     <Input
-  id="name"
-  placeholder="Ahmet Yılmaz"
-  value={form.name}
-  onChange={(e) => updateField("name", e.target.value)}
-  required
-  disabled={prefillLoading}
-/>
+                      id="name"
+                      placeholder="Ahmet Yılmaz"
+                      value={form.name}
+                      onChange={(e) => updateField("name", e.target.value)}
+                      required
+                      disabled={prefillLoading}
+                    />
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="email">E-posta Adresi *</Label>
                     <Input
-  id="email"
-  type="email"
-  placeholder="ahmet@ornek.com"
-  value={form.email}
-  onChange={(e) => updateField("email", e.target.value)}
-  onBlur={() =>
-    updateField(
-      "email",
-      String(form.email || "")
-        .replace(/\u200B/g, "")
-        .replace(/\u00A0/g, " ")
-        .trim()
-        .replace(/\s+/g, "")
-        .toLowerCase()
-    )
-  }
-  autoComplete="email"
-  inputMode="email"
-  autoCapitalize="none"
-  autoCorrect="off"
-  spellCheck={false}
-  required
-  disabled={prefillLoading}
-/>
-                    
+                      id="email"
+                      type="email"
+                      placeholder="ahmet@ornek.com"
+                      value={form.email}
+                      onChange={(e) => updateField("email", e.target.value)}
+                      onBlur={() =>
+                        updateField(
+                          "email",
+                          String(form.email || "")
+                            .replace(/\u200B/g, "")
+                            .replace(/\u00A0/g, " ")
+                            .trim()
+                            .replace(/\s+/g, "")
+                            .toLowerCase()
+                        )
+                      }
+                      autoComplete="email"
+                      inputMode="email"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      required
+                      disabled={prefillLoading}
+                    />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="phone">Telefon Numarası *</Label>
                   <Input
-  id="phone"
-  type="tel"
-  placeholder="+90 555 123 4567"
-  value={form.phone}
-  onChange={(e) => updateField("phone", e.target.value)}
-  required
-  disabled={prefillLoading}
-/>
+                    id="phone"
+                    type="tel"
+                    placeholder="+90 555 123 4567"
+                    value={form.phone}
+                    onChange={(e) => updateField("phone", e.target.value)}
+                    required
+                    disabled={prefillLoading}
+                  />
                 </div>
 
                 <div className="grid sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>İl *</Label>
                     <Select value={form.il} onValueChange={(v) => updateField("il", v)}>
-  <SelectTrigger className="w-full">
-    <SelectValue placeholder="İl seçin" />
-  </SelectTrigger>
-  <SelectContent className="z-[100]">
-    {availableIller.map((il) => (
-      <SelectItem key={il} value={il}>
-        {il}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="İl seçin" />
+                      </SelectTrigger>
+                      <SelectContent className="z-[100]">
+                        {availableIller.map((il) => (
+                          <SelectItem key={il} value={il}>
+                            {il}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
                     <Label>İlçe *</Label>
-                   <Select
-  value={form.ilce}
-  onValueChange={(v) => updateField("ilce", v)}
-  disabled={!form.il}
->
-  <SelectTrigger className="w-full">
-    <SelectValue placeholder="İlçe seçin" />
-  </SelectTrigger>
-  <SelectContent className="z-[100]">
-    {availableIlceler.map((ilce) => (
-      <SelectItem key={ilce} value={ilce}>
-        {ilce}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
+                    <Select
+                      value={form.ilce}
+                      onValueChange={(v) => updateField("ilce", v)}
+                      disabled={!form.il}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="İlçe seçin" />
+                      </SelectTrigger>
+                      <SelectContent className="z-[100]">
+                        {availableIlceler.map((ilce) => (
+                          <SelectItem key={ilce} value={ilce}>
+                            {ilce}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
                     <Label>Mahalle *</Label>
-                   <Select
-  value={form.mahalle}
-  onValueChange={(v) => updateField("mahalle", v)}
-  disabled={!form.ilce || availableMahalleler.length === 0}
->
-  <SelectTrigger className="w-full">
-    <SelectValue
-      placeholder={
-        !form.ilce
-          ? "Önce ilçe seçin"
-          : availableMahalleler.length === 0
-          ? "Mahalle verisi yok"
-          : "Mahalle seçin"
-      }
-    />
-  </SelectTrigger>
-  <SelectContent className="z-[100]">
-    {availableMahalleler.map((m) => (
-      <SelectItem key={m} value={m}>
-        {m}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
+                    <Select
+                      value={form.mahalle}
+                      onValueChange={(v) => updateField("mahalle", v)}
+                      disabled={!form.ilce || availableMahalleler.length === 0}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue
+                          placeholder={
+                            !form.ilce
+                              ? "Önce ilçe seçin"
+                              : availableMahalleler.length === 0
+                              ? "Mahalle verisi yok"
+                              : "Mahalle seçin"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent className="z-[100]">
+                        {availableMahalleler.map((m) => (
+                          <SelectItem key={m} value={m}>
+                            {m}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -610,14 +652,14 @@ toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
                 <div className="space-y-2">
                   <Label htmlFor="address">Açık Adres *</Label>
                   <Textarea
-  id="address"
-  placeholder="Sokak, bina no, daire no vb."
-  value={form.address}
-  onChange={(e) => updateField("address", e.target.value)}
-  required
-  rows={2}
-  disabled={prefillLoading}
-/>
+                    id="address"
+                    placeholder="Sokak, bina no, daire no vb."
+                    value={form.address}
+                    onChange={(e) => updateField("address", e.target.value)}
+                    required
+                    rows={2}
+                    disabled={prefillLoading}
+                  />
                 </div>
               </div>
 
@@ -672,16 +714,25 @@ toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
                     </Select>
                   </div>
                 </div>
-                
-{/* 🔥 2. Ürün (opsiyonel) */}
-<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-  <div className="space-y-2">
+
+                <div
+                  className={`grid sm:grid-cols-2 gap-4 ${
+                    !form.product ? "opacity-50 pointer-events-none" : ""
+                  }`}
+                >
+                  <div className="space-y-2">
                     <Label>2. Ürün (Opsiyonel)</Label>
-                    <Select value={form.product2} onValueChange={(v) => updateField("product2", v)}>
+                    <Select
+                      value={form.product2 || "__none__"}
+                      onValueChange={(v) => updateField("product2", v)}
+                      disabled={!form.product}
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder="Ürün seçin" />
+                        <SelectValue placeholder="Ürün Seçimi" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="__none__">Ürün Seçimi</SelectItem>
+
                         {loadingProducts ? (
                           <SelectItem value="loading" disabled>
                             Ürünler yükleniyor...
@@ -701,26 +752,27 @@ toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
                     </Select>
                   </div>
 
-  <div>
-    <Label>Adet</Label>
-    <Select
-      value={form.quantity2}
-      onValueChange={(value) => updateField("quantity2", value)}
-    >
-      <SelectTrigger>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {[1,2,3,4,5,6,7,8,9,10].map((n) => (
-          <SelectItem key={n} value={String(n)}>
-            {n}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
-</div>
-                
+                  <div className="space-y-2">
+                    <Label>2. Ürün Adet</Label>
+                    <Select
+                      value={form.quantity2}
+                      onValueChange={(v) => updateField("quantity2", v)}
+                      disabled={!form.product}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            {n}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Teslimat Tarihi *</Label>
@@ -750,11 +802,11 @@ toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
                                 year: "numeric",
                               }),
                           }}
-                         disabled={(d) => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return d < today;
-}}
+                          disabled={(d) => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            return d < today;
+                          }}
                           initialFocus
                           className="p-3 pointer-events-auto"
                         />
@@ -808,13 +860,14 @@ toast.success("Rezervasyonunuz başarıyla oluşturuldu!");
               >
                 {submitting ? "Gönderiliyor..." : "Rezervasyonu Tamamla"}
               </Button>
+
               <p className="text-xs text-muted-foreground text-center">
                 Ödeme gerekli değildir. Kapıda ödeme yapılır.
               </p>
             </form>
 
             <div className="lg:col-span-1">
-              <OrderSummary product={selectedProduct} quantity={form.quantity} />
+              <OrderSummary items={summaryItems} />
             </div>
           </div>
         </div>
