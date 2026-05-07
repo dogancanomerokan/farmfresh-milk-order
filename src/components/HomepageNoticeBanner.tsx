@@ -2,8 +2,8 @@ const HomepageNoticeBanner = () => {
   return (
     <>
       {/* Mobil */}
-      <div className="block lg:hidden px-4 -mt-6 mb-6 relative z-20">
-        <div className="rounded-2xl border border-white/30 bg-white/55 backdrop-blur-md shadow-sm p-3">
+      <div className="block lg:hidden px-4 -mt-16 mb-8 relative z-20">
+        <div className="rounded-2xl border border-white/20 bg-background/70 backdrop-blur-md shadow-sm p-3">
           <div className="flex items-start gap-3">
             <span className="text-lg">🥛</span>
             <div className="space-y-1">
