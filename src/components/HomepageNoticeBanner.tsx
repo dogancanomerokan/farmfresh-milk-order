@@ -1,4 +1,30 @@
+import { useEffect, useState } from "react";
+
 const HomepageNoticeBanner = () => {
+  const [hideBanner, setHideBanner] = useState(false);
+
+useEffect(() => {
+  const handleScroll = () => {
+    const footer = document.querySelector("footer");
+    if (!footer) return;
+
+    const footerTop = footer.getBoundingClientRect().top;
+    const windowHeight = window.innerHeight;
+
+    setHideBanner(footerTop < windowHeight + 80);
+  };
+
+  handleScroll();
+  window.addEventListener("scroll", handleScroll);
+  window.addEventListener("resize", handleScroll);
+
+  return () => {
+    window.removeEventListener("scroll", handleScroll);
+    window.removeEventListener("resize", handleScroll);
+  };
+}, []);
+
+if (hideBanner) return null;
   return (
     <>
       {/* Mobil */}
