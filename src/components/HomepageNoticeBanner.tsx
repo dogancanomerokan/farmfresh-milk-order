@@ -2,7 +2,7 @@ const HomepageNoticeBanner = () => {
   return (
     <>
       {/* Mobil */}
-      <div className="block lg:hidden fixed right-4 left-4 bottom-[0.25rem] z-50 [@media(orientation:landscape)]:hidden">
+      <div className="block lg:hidden px-4 [@media(orientation:landscape)]:hidden">
   <div className="rounded-2xl border border-white/20 bg-background/50 backdrop-blur-md shadow-md p-3">
     <div className="flex items-start gap-3">
       <span className="text-lg">🥛</span>
