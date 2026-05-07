@@ -17,6 +17,7 @@ import CustomerManagementPage from "./pages/CustomerManagementPage";
 import NotFound from "./pages/NotFound";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import AuthCallbackPage from "@/pages/AuthCallbackPage";
+import CampaignAdminPage from "@/pages/CampaignAdminPage";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin-campaigns" element={<CampaignAdminPage />} />
             <Route path="/dispatch" element={<DispatchPage />} />
             <Route path="/order-manage" element={<OrderManagePage />} />
             <Route path="/admincustomers" element={<CustomerManagementPage />} />
