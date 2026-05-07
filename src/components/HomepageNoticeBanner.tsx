@@ -2,24 +2,24 @@ const HomepageNoticeBanner = () => {
   return (
     <>
       {/* Mobil */}
-      <div className="block lg:hidden px-4 -mt-16 mb-8 relative z-20">
-        <div className="rounded-2xl border border-white/20 bg-background/70 backdrop-blur-md shadow-sm p-3">
-          <div className="flex items-start gap-3">
-            <span className="text-lg">🥛</span>
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase text-muted-foreground">
-                Bu Ay
-              </p>
-              <p className="text-sm font-medium text-foreground">
-                20 litre alana 2 litre hediye
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Detaylar üye panelinde
-              </p>
-            </div>
-          </div>
-        </div>
+      <div className="block lg:hidden fixed right-4 left-4 bottom-28 z-50">
+  <div className="rounded-2xl border border-white/20 bg-background/75 backdrop-blur-md shadow-md p-3">
+    <div className="flex items-start gap-3">
+      <span className="text-lg">🥛</span>
+      <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase text-muted-foreground">
+          Bu Ay
+        </p>
+        <p className="text-sm font-medium text-foreground">
+          20 litre alana 2 litre hediye
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Detaylar üye panelinde
+        </p>
       </div>
+    </div>
+  </div>
+</div>
 
       {/* Desktop */}
       <div className="hidden lg:block fixed right-6 top-1/2 -translate-y-1/2 z-50">
