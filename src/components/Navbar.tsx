@@ -88,6 +88,14 @@ const Navbar = () => {
     Yönetim Paneli
   </Link>
 )}
+          {!adminRoleLoading && adminRole === "super_admin" && (
+  <Link
+    to="/admin-campaigns"
+    className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+  >
+    Kampanyalar
+  </Link>
+)}
           
 {!adminRoleLoading && adminRole && (
   <Link
