@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import heroImage from "@/assets/hero-farm.jpg";
+import HomepageNoticeBanner from "@/components/HomepageNoticeBanner";
 
 const Hero = () => {
   return (
@@ -34,6 +35,9 @@ const Hero = () => {
               </Button>
             </a>
           </div>
+          <div className="mt-5 lg:hidden">
+  <HomepageNoticeBanner />
+</div>
         </div>
       </div>
     </section>
