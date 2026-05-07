@@ -1,7 +1,7 @@
 const HomepageNoticeBanner = () => {
   return (
-    <div className="hidden lg:block fixed right-6 top-1/2 -translate-y-1/2 z-50">
-      <div className="w-[260px] rounded-2xl p-4 bg-white/40 backdrop-blur-md border border-white/20 shadow-sm">
+    <div className="fixed right-3 bottom-20 z-50 lg:right-6 lg:top-1/2 lg:bottom-auto lg:-translate-y-1/2">
+      <div className="w-[220px] lg:w-[260px] rounded-2xl p-3 lg:p-4 bg-white/40 backdrop-blur-md border border-white/20 shadow-sm">
         
         {/* DUYURU */}
         <div className="mb-4">
