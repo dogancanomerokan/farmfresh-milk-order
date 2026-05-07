@@ -119,7 +119,7 @@ const Navbar = () => {
                         }
                         className="block rounded-xl px-3 py-2 text-sm font-medium text-foreground hover:bg-muted hover:text-primary transition-colors"
                       >
-                        Yönetim Paneli
+                        Kullanıcı Yönetimi
                       </Link>
 
                       <Link
@@ -129,7 +129,7 @@ const Navbar = () => {
                         }
                         className="block rounded-xl px-3 py-2 text-sm font-medium text-foreground hover:bg-muted hover:text-primary transition-colors"
                       >
-                        Kampanyalar
+                        Kampanya Yönetimi
                       </Link>
                     </>
                   )}
@@ -231,7 +231,7 @@ const Navbar = () => {
                     onClick={() => setIsOpen(false)}
                     className="block text-sm font-medium text-foreground py-2 pl-3"
                   >
-                    Yönetim Paneli
+                    Kullanıcı Yönetimi
                   </Link>
 
                   <Link
@@ -239,7 +239,7 @@ const Navbar = () => {
                     onClick={() => setIsOpen(false)}
                     className="block text-sm font-medium text-foreground py-2 pl-3"
                   >
-                    Kampanyalar
+                    Kampanya Yönetimi
                   </Link>
                 </>
               )}
