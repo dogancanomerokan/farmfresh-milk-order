@@ -67,8 +67,7 @@ const HomepageNoticeBanner = () => {
     };
   }, []);
 
-  // Veri yoksa banner gösterme
-  if (!announcement && !campaign) return null;
+
 
   // Mobilde footer üstüne çıkmasın
   if (hideBanner) return null;
