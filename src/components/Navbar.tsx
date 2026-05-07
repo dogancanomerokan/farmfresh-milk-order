@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X, Milk, User, LogIn } from "lucide-react";
+import { Menu, X, Milk, User, LogIn, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabaseClient";
@@ -9,6 +9,7 @@ type AdminRole = "operations_admin" | "super_admin" | null;
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
   const [adminRole, setAdminRole] = useState<AdminRole>(null);
   const [adminRoleLoading, setAdminRoleLoading] = useState(true);
   const { user } = useAuth();
@@ -81,39 +82,58 @@ const Navbar = () => {
           </Link>
 
           {!adminRoleLoading && adminRole === "super_admin" && (
-  <Link
-    to="/admin"
-    className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-  >
-    Yönetim Paneli
-  </Link>
-)}
-          {!adminRoleLoading && adminRole === "super_admin" && (
-  <Link
-    to="/admin-campaigns"
-    className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-  >
-    Kampanyalar
-  </Link>
-)}
-          
-{!adminRoleLoading && adminRole && (
-  <Link
-    to="/order-manage"
-    className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-  >
-    Sipariş Yönetimi
-  </Link>
-)}
-          
-          {!adminRoleLoading && adminRole && (
+  {!adminRoleLoading && adminRole && (
+  <div className="relative">
+    <button
+      type="button"
+      onClick={() => setIsAdminMenuOpen((prev) => !prev)}
+      className="text-sm font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1"
+    >
+      Admin
+      <ChevronDown className="h-4 w-4" />
+    </button>
+
+    {isAdminMenuOpen && (
+      <div className="absolute right-0 mt-3 w-48 rounded-xl border border-border bg-background/95 backdrop-blur-md shadow-lg p-2 z-50">
+        {adminRole === "super_admin" && (
+          <>
             <Link
-              to="/dispatch"
-              className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+              to="/admin"
+              onClick={() => setIsAdminMenuOpen(false)}
+              className="block rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted hover:text-primary transition-colors"
             >
-              Dağıtım
+              Yönetim Paneli
             </Link>
-          )}
+
+            <Link
+              to="/admin-campaigns"
+              onClick={() => setIsAdminMenuOpen(false)}
+              className="block rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted hover:text-primary transition-colors"
+            >
+              Kampanyalar
+            </Link>
+          </>
+        )}
+
+        <Link
+          to="/order-manage"
+          onClick={() => setIsAdminMenuOpen(false)}
+          className="block rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted hover:text-primary transition-colors"
+        >
+          Sipariş Yönetimi
+        </Link>
+
+        <Link
+          to="/dispatch"
+          onClick={() => setIsAdminMenuOpen(false)}
+          className="block rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted hover:text-primary transition-colors"
+        >
+          Dağıtım
+        </Link>
+      </div>
+    )}
+  </div>
+)}
 
           {user ? (
             <Link
@@ -164,44 +184,49 @@ const Navbar = () => {
             Sipariş Ver
           </Link>
 
-         {!adminRoleLoading && adminRole === "super_admin" && (
-  <Link
-    to="/admin"
-    onClick={() => setIsOpen(false)}
-    className="block text-sm font-medium text-foreground py-2"
-  >
-    Yönetim Paneli
-  </Link>
-)}
-      {!adminRoleLoading && adminRole === "super_admin" && (
-  <Link
-    to="/admin-campaigns"
-    onClick={() => setIsOpen(false)}
-    className="block text-sm font-medium text-foreground py-2"
-  >
-    Kampanyalar
-  </Link>
-)}    
-{!adminRoleLoading && adminRole && (
-  <Link
-    to="/order-manage"
-    onClick={() => setIsOpen(false)}
-    className="block text-sm font-medium text-foreground py-2"
-  >
-    Sipariş Yönetimi
-  </Link>
-)}
-          
-          {!adminRoleLoading && adminRole && (
-            <Link
-              to="/dispatch"
-              onClick={() => setIsOpen(false)}
-              className="block text-sm font-medium text-foreground py-2"
-            >
-              Dağıtım
-            </Link>
-          )}
+  {!adminRoleLoading && adminRole && (
+  <div className="border-t border-border pt-2">
+    <p className="text-xs uppercase tracking-widest text-muted-foreground px-1 mb-1">
+      Admin
+    </p>
 
+    {adminRole === "super_admin" && (
+      <>
+        <Link
+          to="/admin"
+          onClick={() => setIsOpen(false)}
+          className="block text-sm font-medium text-foreground py-2 pl-3"
+        >
+          Yönetim Paneli
+        </Link>
+
+        <Link
+          to="/admin-campaigns"
+          onClick={() => setIsOpen(false)}
+          className="block text-sm font-medium text-foreground py-2 pl-3"
+        >
+          Kampanyalar
+        </Link>
+      </>
+    )}
+
+    <Link
+      to="/order-manage"
+      onClick={() => setIsOpen(false)}
+      className="block text-sm font-medium text-foreground py-2 pl-3"
+    >
+      Sipariş Yönetimi
+    </Link>
+
+    <Link
+      to="/dispatch"
+      onClick={() => setIsOpen(false)}
+      className="block text-sm font-medium text-foreground py-2 pl-3"
+    >
+      Dağıtım
+    </Link>
+  </div>
+)}
           {user ? (
             <Link
               to="/member"
