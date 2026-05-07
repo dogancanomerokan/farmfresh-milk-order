@@ -11,7 +11,11 @@ useEffect(() => {
     const footerTop = footer.getBoundingClientRect().top;
     const windowHeight = window.innerHeight;
 
-    setHideBanner(footerTop < windowHeight + 80);
+    if (window.innerWidth < 1024) {
+  setHideBanner(footerTop < windowHeight + 80);
+} else {
+  setHideBanner(false);
+}
   };
 
   handleScroll();
