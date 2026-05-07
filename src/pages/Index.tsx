@@ -3,6 +3,7 @@ import Hero from "@/components/Hero";
 import ProductShowcase from "@/components/ProductShowcase";
 import HowItWorks from "@/components/HowItWorks";
 import Footer from "@/components/Footer";
+import HomepageNoticeBanner from "@/components/HomepageNoticeBanner";
 
 const Index = () => {
   return (
