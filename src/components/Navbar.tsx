@@ -173,7 +173,15 @@ const Navbar = () => {
     Yönetim Paneli
   </Link>
 )}
-          
+      {!adminRoleLoading && adminRole === "super_admin" && (
+  <Link
+    to="/admin-campaigns"
+    onClick={() => setIsOpen(false)}
+    className="block text-sm font-medium text-foreground py-2"
+  >
+    Kampanyalar
+  </Link>
+)}    
 {!adminRoleLoading && adminRole && (
   <Link
     to="/order-manage"
