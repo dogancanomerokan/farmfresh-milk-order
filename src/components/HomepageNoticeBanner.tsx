@@ -23,6 +23,38 @@ useEffect(() => {
 }
   };
 
+  useEffect(() => {
+  const loadBannerData = async () => {
+    try {
+      // Aktif duyuru
+      const { data: announcementData } = await supabase
+        .from("announcements")
+        .select("*")
+        .eq("is_active", true)
+        .eq("show_on_homepage", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // Aktif kampanya
+      const { data: campaignData } = await supabase
+        .from("campaigns")
+        .select("*")
+        .eq("is_active", true)
+        .eq("show_on_homepage", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      setAnnouncement(announcementData || null);
+      setCampaign(campaignData || null);
+    } catch (err) {
+      console.error("Banner verileri yüklenemedi:", err);
+    }
+  };
+
+  loadBannerData();
+}, []);
   handleScroll();
   window.addEventListener("scroll", handleScroll);
   window.addEventListener("resize", handleScroll);
