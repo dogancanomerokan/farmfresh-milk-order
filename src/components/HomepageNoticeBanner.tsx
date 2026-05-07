@@ -59,7 +59,7 @@ if (hideBanner) return null;
               Duyuru
             </p>
             <p className="text-sm text-foreground">
-              Pazar teslimatları sınırlı kapasitededir.
+              Her 60 litre süt alımınızda geçerli.
             </p>
           </div>
 
@@ -68,7 +68,7 @@ if (hideBanner) return null;
               Bu Ay
             </p>
             <p className="text-sm font-medium text-foreground">
-              20 litre alana 2 litre hediye 🥛
+              3 litre hediye 🥛
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               Detaylar üye panelinde
