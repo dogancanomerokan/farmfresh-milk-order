@@ -35,7 +35,7 @@ const Hero = () => {
               </Button>
             </a>
           </div>
-          <div className="mt-5 lg:hidden">
+       <div className="mt-5 lg:hidden sticky top-[78vh] z-40">
   <HomepageNoticeBanner />
 </div>
         </div>
