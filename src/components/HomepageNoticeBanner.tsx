@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
 const HomepageNoticeBanner = () => {
+  const [announcement, setAnnouncement] = useState<any>(null);
+const [campaign, setCampaign] = useState<any>(null);
+const [hideBanner, setHideBanner] = useState(false);
   const [hideBanner, setHideBanner] = useState(false);
 
 useEffect(() => {
