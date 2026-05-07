@@ -104,7 +104,7 @@ const Navbar = () => {
                 }
                 className="text-sm font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1"
               >
-                Admin
+                Yönetim
                 <ChevronDown className="h-4 w-4" />
               </button>
 
@@ -221,7 +221,7 @@ const Navbar = () => {
           {!adminRoleLoading && adminRole && (
             <div className="border-t border-border pt-3 mt-2">
               <p className="text-xs uppercase tracking-widest text-muted-foreground px-1 mb-2">
-                Admin
+                Yönetim
               </p>
 
               {adminRole === "super_admin" && (
