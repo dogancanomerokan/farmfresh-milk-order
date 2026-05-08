@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Megaphone, Gift } from "lucide-react";
+import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabaseClient";
@@ -36,140 +37,114 @@ const CampaignAdminPage = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-
-      try {
-        const { data: campaignData, error: campaignError } = await supabase
-          .from("campaigns")
-          .select(
-            `
-            *,
-            campaign_rule_types (
-              name,
-              code
-            )
-          `
-          )
-          .order("created_at", { ascending: false });
-
-        if (campaignError) throw campaignError;
-
-        const { data: announcementData, error: announcementError } =
-          await supabase
-            .from("announcements")
-            .select("*")
-            .order("created_at", { ascending: false });
-
-        if (announcementError) throw announcementError;
-
-        setCampaigns((campaignData || []) as Campaign[]);
-        setAnnouncements((announcementData || []) as Announcement[]);
-      } catch (error) {
-        console.error("Kampanya yönetimi verileri alınamadı:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
-
   const formatDate = (value: string | null) => {
     if (!value) return "Süresiz";
-
     return new Date(value).toLocaleDateString("tr-TR");
   };
 
-  const refreshData = async () => {
-  setLoading(true);
+  const loadData = async () => {
+    setLoading(true);
 
-  try {
-    const { data: campaignData, error: campaignError } = await supabase
-      .from("campaigns")
-      .select(`
-        *,
-        campaign_rule_types (
-          name,
-          code
+    try {
+      const { data: campaignData, error: campaignError } = await supabase
+        .from("campaigns")
+        .select(
+          `
+          *,
+          campaign_rule_types (
+            name,
+            code
+          )
+        `
         )
-      `)
-      .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false });
 
-    if (campaignError) throw campaignError;
+      if (campaignError) throw campaignError;
 
-    const { data: announcementData, error: announcementError } = await supabase
+      const { data: announcementData, error: announcementError } =
+        await supabase
+          .from("announcements")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+      if (announcementError) throw announcementError;
+
+      setCampaigns((campaignData || []) as Campaign[]);
+      setAnnouncements((announcementData || []) as Announcement[]);
+    } catch (error: any) {
+      console.error("Kampanya yönetimi verileri alınamadı:", error);
+      toast.error(error.message || "Veriler yüklenemedi");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const toggleCampaignActive = async (id: string, currentValue: boolean) => {
+    const { error } = await supabase
+      .from("campaigns")
+      .update({ is_active: !currentValue })
+      .eq("id", id);
+
+    if (error) {
+      toast.error(error.message || "Kampanya durumu güncellenemedi");
+      return;
+    }
+
+    toast.success("Kampanya durumu güncellendi");
+    await loadData();
+  };
+
+  const toggleCampaignHomepage = async (id: string, currentValue: boolean) => {
+    const { error } = await supabase
+      .from("campaigns")
+      .update({ show_on_homepage: !currentValue })
+      .eq("id", id);
+
+    if (error) {
+      toast.error(error.message || "Ana sayfa görünürlüğü güncellenemedi");
+      return;
+    }
+
+    toast.success("Ana sayfa görünürlüğü güncellendi");
+    await loadData();
+  };
+
+  const toggleAnnouncementActive = async (id: string, currentValue: boolean) => {
+    const { error } = await supabase
       .from("announcements")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .update({ is_active: !currentValue })
+      .eq("id", id);
 
-    if (announcementError) throw announcementError;
+    if (error) {
+      toast.error(error.message || "Duyuru durumu güncellenemedi");
+      return;
+    }
 
-    setCampaigns((campaignData || []) as Campaign[]);
-    setAnnouncements((announcementData || []) as Announcement[]);
-  } catch (error) {
-    console.error("Veriler yenilenemedi:", error);
-  } finally {
-    setLoading(false);
-  }
-};
+    toast.success("Duyuru durumu güncellendi");
+    await loadData();
+  };
 
-const toggleCampaignActive = async (id: string, currentValue: boolean) => {
-  const { error } = await supabase
-    .from("campaigns")
-    .update({ is_active: !currentValue })
-    .eq("id", id);
+  const toggleAnnouncementHomepage = async (
+    id: string,
+    currentValue: boolean
+  ) => {
+    const { error } = await supabase
+      .from("announcements")
+      .update({ show_on_homepage: !currentValue })
+      .eq("id", id);
 
-  if (error) {
-    console.error(error);
-    return;
-  }
+    if (error) {
+      toast.error(error.message || "Ana sayfa görünürlüğü güncellenemedi");
+      return;
+    }
 
-  await refreshData();
-};
-
-const toggleCampaignHomepage = async (id: string, currentValue: boolean) => {
-  const { error } = await supabase
-    .from("campaigns")
-    .update({ show_on_homepage: !currentValue })
-    .eq("id", id);
-
-  if (error) {
-    console.error(error);
-    return;
-  }
-
-  await refreshData();
-};
-
-const toggleAnnouncementActive = async (id: string, currentValue: boolean) => {
-  const { error } = await supabase
-    .from("announcements")
-    .update({ is_active: !currentValue })
-    .eq("id", id);
-
-  if (error) {
-    console.error(error);
-    return;
-  }
-
-  await refreshData();
-};
-
-const toggleAnnouncementHomepage = async (id: string, currentValue: boolean) => {
-  const { error } = await supabase
-    .from("announcements")
-    .update({ show_on_homepage: !currentValue })
-    .eq("id", id);
-
-  if (error) {
-    console.error(error);
-    return;
-  }
-
-  await refreshData();
-};
+    toast.success("Ana sayfa görünürlüğü güncellendi");
+    await loadData();
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -200,7 +175,7 @@ const toggleAnnouncementHomepage = async (id: string, currentValue: boolean) => 
                     Kampanyalar
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    Tanımlı kampanyaların durumlarını görüntüleyin.
+                    Tanımlı kampanyaların durumlarını görüntüleyin ve yönetin.
                   </p>
                 </div>
               </div>
@@ -244,7 +219,7 @@ const toggleAnnouncementHomepage = async (id: string, currentValue: boolean) => 
                           )}
                         </div>
 
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 md:justify-end">
                           <span
                             className={`rounded-full px-3 py-1 text-xs font-medium ${
                               campaign.is_active
@@ -268,22 +243,32 @@ const toggleAnnouncementHomepage = async (id: string, currentValue: boolean) => 
                           </span>
 
                           <button
-  type="button"
-  onClick={() => toggleCampaignActive(campaign.id, campaign.is_active)}
-  className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
->
-  {campaign.is_active ? "Pasif Yap" : "Aktif Yap"}
-</button>
+                            type="button"
+                            onClick={() =>
+                              toggleCampaignActive(
+                                campaign.id,
+                                campaign.is_active
+                              )
+                            }
+                            className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                          >
+                            {campaign.is_active ? "Pasif Yap" : "Aktif Yap"}
+                          </button>
 
-<button
-  type="button"
-  onClick={() =>
-    toggleCampaignHomepage(campaign.id, campaign.show_on_homepage)
-  }
-  className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
->
-  {campaign.show_on_homepage ? "Ana Sayfadan Kaldır" : "Ana Sayfada Göster"}
-</button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              toggleCampaignHomepage(
+                                campaign.id,
+                                campaign.show_on_homepage
+                              )
+                            }
+                            className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                          >
+                            {campaign.show_on_homepage
+                              ? "Ana Sayfadan Kaldır"
+                              : "Ana Sayfada Göster"}
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -300,7 +285,7 @@ const toggleAnnouncementHomepage = async (id: string, currentValue: boolean) => 
                     Duyurular
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    Ana sayfada gösterilecek duyuruları görüntüleyin.
+                    Ana sayfada gösterilecek duyuruları görüntüleyin ve yönetin.
                   </p>
                 </div>
               </div>
@@ -332,7 +317,7 @@ const toggleAnnouncementHomepage = async (id: string, currentValue: boolean) => 
                           </p>
                         </div>
 
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 md:justify-end">
                           <span
                             className={`rounded-full px-3 py-1 text-xs font-medium ${
                               announcement.is_active
@@ -354,6 +339,34 @@ const toggleAnnouncementHomepage = async (id: string, currentValue: boolean) => 
                               ? "Ana sayfada"
                               : "Ana sayfada değil"}
                           </span>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              toggleAnnouncementActive(
+                                announcement.id,
+                                announcement.is_active
+                              )
+                            }
+                            className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                          >
+                            {announcement.is_active ? "Pasif Yap" : "Aktif Yap"}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              toggleAnnouncementHomepage(
+                                announcement.id,
+                                announcement.show_on_homepage
+                              )
+                            }
+                            className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                          >
+                            {announcement.show_on_homepage
+                              ? "Ana Sayfadan Kaldır"
+                              : "Ana Sayfada Göster"}
+                          </button>
                         </div>
                       </div>
                     </div>
