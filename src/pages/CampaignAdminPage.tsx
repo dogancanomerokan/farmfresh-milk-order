@@ -82,6 +82,95 @@ const CampaignAdminPage = () => {
     return new Date(value).toLocaleDateString("tr-TR");
   };
 
+  const refreshData = async () => {
+  setLoading(true);
+
+  try {
+    const { data: campaignData, error: campaignError } = await supabase
+      .from("campaigns")
+      .select(`
+        *,
+        campaign_rule_types (
+          name,
+          code
+        )
+      `)
+      .order("created_at", { ascending: false });
+
+    if (campaignError) throw campaignError;
+
+    const { data: announcementData, error: announcementError } = await supabase
+      .from("announcements")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (announcementError) throw announcementError;
+
+    setCampaigns((campaignData || []) as Campaign[]);
+    setAnnouncements((announcementData || []) as Announcement[]);
+  } catch (error) {
+    console.error("Veriler yenilenemedi:", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const toggleCampaignActive = async (id: string, currentValue: boolean) => {
+  const { error } = await supabase
+    .from("campaigns")
+    .update({ is_active: !currentValue })
+    .eq("id", id);
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  await refreshData();
+};
+
+const toggleCampaignHomepage = async (id: string, currentValue: boolean) => {
+  const { error } = await supabase
+    .from("campaigns")
+    .update({ show_on_homepage: !currentValue })
+    .eq("id", id);
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  await refreshData();
+};
+
+const toggleAnnouncementActive = async (id: string, currentValue: boolean) => {
+  const { error } = await supabase
+    .from("announcements")
+    .update({ is_active: !currentValue })
+    .eq("id", id);
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  await refreshData();
+};
+
+const toggleAnnouncementHomepage = async (id: string, currentValue: boolean) => {
+  const { error } = await supabase
+    .from("announcements")
+    .update({ show_on_homepage: !currentValue })
+    .eq("id", id);
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  await refreshData();
+};
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
