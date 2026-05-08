@@ -266,6 +266,24 @@ const toggleAnnouncementHomepage = async (id: string, currentValue: boolean) => 
                               ? "Ana sayfada"
                               : "Ana sayfada değil"}
                           </span>
+
+                          <button
+  type="button"
+  onClick={() => toggleCampaignActive(campaign.id, campaign.is_active)}
+  className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+>
+  {campaign.is_active ? "Pasif Yap" : "Aktif Yap"}
+</button>
+
+<button
+  type="button"
+  onClick={() =>
+    toggleCampaignHomepage(campaign.id, campaign.show_on_homepage)
+  }
+  className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+>
+  {campaign.show_on_homepage ? "Ana Sayfadan Kaldır" : "Ana Sayfada Göster"}
+</button>
                         </div>
                       </div>
                     </div>
