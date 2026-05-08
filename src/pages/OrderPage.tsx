@@ -17,6 +17,8 @@ import OrderSummary from "@/components/OrderSummary";
 import { getDeliveryZones, isAddressAllowed, DeliveryZone } from "@/lib/delivery-zones";
 import { getMahalleler } from "@/lib/mahalle-data";
 import { supabase } from "@/lib/supabaseClient";
+import { evaluateCampaigns } from "@/lib/campaigns/campaignEngine";
+import type { CampaignEvaluationResult } from "@/lib/campaigns/types";
 
 const timeSlots = [
   "08:00 - 10:00",
@@ -68,6 +70,10 @@ const OrderPage = () => {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(true);
+
+  const [campaignResult, setCampaignResult] =
+    useState<CampaignEvaluationResult | null>(null);
+  const [campaignLoading, setCampaignLoading] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -176,38 +182,67 @@ const OrderPage = () => {
   const hasZones = zones.length > 0;
 
   const availableIller = hasZones
-    ? [...new Set(zones.map((z) => z.il))].sort((a, b) => a.localeCompare(b, "tr"))
+    ? [...new Set(zones.map((z) => z.il))].sort((a, b) =>
+        a.localeCompare(b, "tr")
+      )
     : [];
 
   const availableIlceler = hasZones
-    ? [...new Set(zones.filter((z) => z.il === form.il).map((z) => z.ilce))].sort((a, b) => a.localeCompare(b, "tr"))
+    ? [
+        ...new Set(
+          zones.filter((z) => z.il === form.il).map((z) => z.ilce)
+        ),
+      ].sort((a, b) => a.localeCompare(b, "tr"))
     : [];
 
   const adminMahalleler = hasZones
-    ? zones.filter((z) => z.il === form.il && z.ilce === form.ilce).flatMap((z) => z.mahalleler)
+    ? zones
+        .filter((z) => z.il === form.il && z.ilce === form.ilce)
+        .flatMap((z) => z.mahalleler)
     : [];
 
-  const dataMahalleler = form.il && form.ilce ? getMahalleler(form.il, form.ilce) : [];
-  const availableMahalleler = adminMahalleler.length > 0 ? adminMahalleler : dataMahalleler;
+  const dataMahalleler =
+    form.il && form.ilce ? getMahalleler(form.il, form.ilce) : [];
+
+  const availableMahalleler =
+    adminMahalleler.length > 0 ? adminMahalleler : dataMahalleler;
+
   const showMahalle = availableMahalleler.length > 0;
 
   useEffect(() => {
     if (availableIller.length === 1 && form.il !== availableIller[0]) {
-      setForm((prev) => ({ ...prev, il: availableIller[0], ilce: "", mahalle: "" }));
+      setForm((prev) => ({
+        ...prev,
+        il: availableIller[0],
+        ilce: "",
+        mahalle: "",
+      }));
     }
   }, [availableIller, form.il]);
 
   useEffect(() => {
     if (!form.il) return;
+
     if (availableIlceler.length === 1 && form.ilce !== availableIlceler[0]) {
-      setForm((prev) => ({ ...prev, ilce: availableIlceler[0], mahalle: "" }));
+      setForm((prev) => ({
+        ...prev,
+        ilce: availableIlceler[0],
+        mahalle: "",
+      }));
     }
   }, [form.il, form.ilce, availableIlceler]);
 
   useEffect(() => {
     if (!form.ilce || !showMahalle) return;
-    if (availableMahalleler.length === 1 && form.mahalle !== availableMahalleler[0]) {
-      setForm((prev) => ({ ...prev, mahalle: availableMahalleler[0] }));
+
+    if (
+      availableMahalleler.length === 1 &&
+      form.mahalle !== availableMahalleler[0]
+    ) {
+      setForm((prev) => ({
+        ...prev,
+        mahalle: availableMahalleler[0],
+      }));
     }
   }, [form.ilce, form.mahalle, availableMahalleler, showMahalle]);
 
@@ -238,8 +273,13 @@ const OrderPage = () => {
     setAddressWarning("");
   };
 
-  const selectedProduct = products.find((p) => String(p.id) === String(form.product));
-  const selectedProduct2 = products.find((p) => String(p.id) === String(form.product2));
+  const selectedProduct = products.find(
+    (p) => String(p.id) === String(form.product)
+  );
+
+  const selectedProduct2 = products.find(
+    (p) => String(p.id) === String(form.product2)
+  );
 
   const summaryItems = [
     selectedProduct
@@ -263,6 +303,98 @@ const OrderPage = () => {
         }
       : null,
   ].filter(Boolean);
+
+  const subtotal = useMemo(() => {
+    const quantityNumber = selectedProduct ? Number(form.quantity || 1) : 0;
+    const total1 = selectedProduct
+      ? Number(selectedProduct.price || 0) * quantityNumber
+      : 0;
+
+    const quantityNumber2 = selectedProduct2 ? Number(form.quantity2 || 1) : 0;
+    const total2 = selectedProduct2
+      ? Number(selectedProduct2.price || 0) * quantityNumber2
+      : 0;
+
+    return total1 + total2;
+  }, [selectedProduct, selectedProduct2, form.quantity, form.quantity2]);
+
+  const campaignOrderItems = useMemo(() => {
+    return [
+      selectedProduct
+        ? {
+            productId: selectedProduct.id,
+            productName: selectedProduct.name,
+            quantity: Number(form.quantity || 1),
+            unitPrice: Number(selectedProduct.price || 0),
+            volume: Number(selectedProduct.Volume || 0),
+            unit: selectedProduct.unit,
+          }
+        : null,
+      selectedProduct2
+        ? {
+            productId: selectedProduct2.id,
+            productName: selectedProduct2.name,
+            quantity: Number(form.quantity2 || 1),
+            unitPrice: Number(selectedProduct2.price || 0),
+            volume: Number(selectedProduct2.Volume || 0),
+            unit: selectedProduct2.unit,
+          }
+        : null,
+    ].filter(Boolean) as {
+      productId: string;
+      productName: string;
+      quantity: number;
+      unitPrice: number;
+      volume: number;
+      unit: string;
+    }[];
+  }, [selectedProduct, selectedProduct2, form.quantity, form.quantity2]);
+
+  const campaignDependencyKey = useMemo(() => {
+    return JSON.stringify({
+      date: date ? format(date, "yyyy-MM-dd") : null,
+      email: form.email,
+      subtotal,
+      items: campaignOrderItems,
+    });
+  }, [date, form.email, subtotal, campaignOrderItems]);
+
+  useEffect(() => {
+    const runCampaignEvaluation = async () => {
+      if (!date || campaignOrderItems.length === 0 || subtotal <= 0) {
+        setCampaignResult(null);
+        return;
+      }
+
+      try {
+        setCampaignLoading(true);
+
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        const result = await evaluateCampaigns({
+          userId: user?.id || null,
+          userEmail: user?.email || form.email || null,
+          deliveryDate: format(date, "yyyy-MM-dd"),
+          subtotal,
+          items: campaignOrderItems,
+        });
+
+        setCampaignResult(result);
+      } catch (error) {
+        console.error("Kampanya hesaplama hatası:", error);
+        setCampaignResult(null);
+      } finally {
+        setCampaignLoading(false);
+      }
+    };
+
+    runCampaignEvaluation();
+  }, [campaignDependencyKey]);
+
+  const campaignDiscount = campaignResult?.totalDiscount || 0;
+  const finalTotal = campaignResult?.finalTotal ?? subtotal;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -347,26 +479,42 @@ const OrderPage = () => {
       const total2 = unitPrice2 * quantityNumber2;
 
       const totalAmount = total1 + total2;
+
+      let latestCampaignResult: CampaignEvaluationResult | null = null;
+
+      try {
+        latestCampaignResult = await evaluateCampaigns({
+          userId: user?.id || null,
+          userEmail: user?.email || cleanedEmail || null,
+          deliveryDate: format(date, "yyyy-MM-dd"),
+          subtotal: totalAmount,
+          items: campaignOrderItems,
+        });
+      } catch (campaignError) {
+        console.error("Sipariş öncesi kampanya hesaplama hatası:", campaignError);
+      }
+
+      const finalTotalForOrder =
+        latestCampaignResult?.finalTotal ?? campaignResult?.finalTotal ?? totalAmount;
+
       const orderId = crypto.randomUUID();
 
-      const { error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          id: orderId,
-          user_id: user?.id ?? null,
-          guest_name: form.name,
-          guest_email: form.email,
-          guest_phone: form.phone,
-          il: form.il,
-          ilce: form.ilce,
-          mahalle: form.mahalle || null,
-          address: form.address,
-          delivery_date: format(date, "yyyy-MM-dd"),
-          time_slot: form.timeSlot,
-          notes: form.notes || null,
-          status: "pending",
-          total_amount: totalAmount,
-        });
+      const { error: orderError } = await supabase.from("orders").insert({
+        id: orderId,
+        user_id: user?.id ?? null,
+        guest_name: form.name,
+        guest_email: cleanedEmail,
+        guest_phone: form.phone,
+        il: form.il,
+        ilce: form.ilce,
+        mahalle: form.mahalle || null,
+        address: form.address,
+        delivery_date: format(date, "yyyy-MM-dd"),
+        time_slot: form.timeSlot,
+        notes: form.notes || null,
+        status: "pending",
+        total_amount: finalTotalForOrder,
+      });
 
       if (orderError) {
         throw orderError;
@@ -452,12 +600,16 @@ const OrderPage = () => {
             </h2>
             <p className="text-muted-foreground mb-8">
               Siparişiniz için teşekkür ederiz. Taze sütünüz{" "}
-              <strong>{date && format(date, "d MMMM yyyy", { locale: tr })}</strong> tarihinde{" "}
-              <strong>{form.timeSlot}</strong> saatleri arasında teslim edilecektir.
+              <strong>
+                {date && format(date, "d MMMM yyyy", { locale: tr })}
+              </strong>{" "}
+              tarihinde <strong>{form.timeSlot}</strong> saatleri arasında
+              teslim edilecektir.
             </p>
             <Button
               onClick={() => {
                 setSubmitted(false);
+                setCampaignResult(null);
                 setForm({
                   name: "",
                   email: "",
@@ -579,7 +731,10 @@ const OrderPage = () => {
                 <div className="grid sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>İl *</Label>
-                    <Select value={form.il} onValueChange={(v) => updateField("il", v)}>
+                    <Select
+                      value={form.il}
+                      onValueChange={(v) => updateField("il", v)}
+                    >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="İl seçin" />
                       </SelectTrigger>
@@ -674,7 +829,10 @@ const OrderPage = () => {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Ürün (Zorunlu)</Label>
-                    <Select value={form.product} onValueChange={(v) => updateField("product", v)}>
+                    <Select
+                      value={form.product}
+                      onValueChange={(v) => updateField("product", v)}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Ürün seçin" />
                       </SelectTrigger>
@@ -700,7 +858,10 @@ const OrderPage = () => {
 
                   <div className="space-y-2">
                     <Label>Adet</Label>
-                    <Select value={form.quantity} onValueChange={(v) => updateField("quantity", v)}>
+                    <Select
+                      value={form.quantity}
+                      onValueChange={(v) => updateField("quantity", v)}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -786,7 +947,9 @@ const OrderPage = () => {
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {date ? format(date, "d MMMM yyyy", { locale: tr }) : "Tarih seçin"}
+                          {date
+                            ? format(date, "d MMMM yyyy", { locale: tr })
+                            : "Tarih seçin"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -816,7 +979,10 @@ const OrderPage = () => {
 
                   <div className="space-y-2">
                     <Label>Teslimat Saati *</Label>
-                    <Select value={form.timeSlot} onValueChange={(v) => updateField("timeSlot", v)}>
+                    <Select
+                      value={form.timeSlot}
+                      onValueChange={(v) => updateField("timeSlot", v)}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Saat seçin" />
                       </SelectTrigger>
@@ -829,7 +995,11 @@ const OrderPage = () => {
                               key={t}
                               value={t}
                               disabled={isDisabled}
-                              className={isDisabled ? "opacity-40 cursor-not-allowed" : ""}
+                              className={
+                                isDisabled
+                                  ? "opacity-40 cursor-not-allowed"
+                                  : ""
+                              }
                             >
                               {t}
                             </SelectItem>
@@ -850,6 +1020,51 @@ const OrderPage = () => {
                     rows={2}
                   />
                 </div>
+
+                {(campaignLoading ||
+                  (campaignResult &&
+                    campaignResult.appliedCampaigns.length > 0)) && (
+                  <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm">
+                    {campaignLoading && (
+                      <p className="text-green-700">
+                        Kampanyalar kontrol ediliyor...
+                      </p>
+                    )}
+
+                    {!campaignLoading &&
+                      campaignResult &&
+                      campaignResult.appliedCampaigns.length > 0 && (
+                        <>
+                          <p className="font-semibold text-green-800">
+                            Uygulanan Kampanyalar
+                          </p>
+
+                          <div className="mt-2 space-y-1">
+                            {campaignResult.messages.map((message, index) => (
+                              <p key={index} className="text-green-700">
+                                {message}
+                              </p>
+                            ))}
+                          </div>
+
+                          {campaignDiscount > 0 && (
+                            <div className="mt-3 border-t border-green-200 pt-3 space-y-1">
+                              <p className="text-green-800">
+                                Ara toplam: {subtotal.toFixed(2)} TL
+                              </p>
+                              <p className="font-semibold text-green-800">
+                                Toplam indirim:{" "}
+                                {campaignDiscount.toFixed(2)} TL
+                              </p>
+                              <p className="font-bold text-green-900">
+                                Kampanyalı toplam: {finalTotal.toFixed(2)} TL
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      )}
+                  </div>
+                )}
               </div>
 
               <Button
