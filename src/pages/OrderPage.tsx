@@ -1031,7 +1031,7 @@ const OrderPage = () => {
                       </p>
                     )}
 
-                    {!campaignLoading &&
+                    {!campaignLoading
                       {campaignResult &&
  campaignResult.appliedCampaigns.length > 0 && (
   <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4 text-sm">
