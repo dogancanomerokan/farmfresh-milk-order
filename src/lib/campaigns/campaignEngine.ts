@@ -246,6 +246,7 @@ export async function fetchActiveCampaigns(): Promise<Campaign[]> {
 console.log("ACTIVE CAMPAIGNS:", data);
 
 return (data || []) as Campaign[];
+}
 
 export async function evaluateCampaigns(
   input: CampaignEvaluationInput
