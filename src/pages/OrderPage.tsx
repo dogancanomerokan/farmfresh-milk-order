@@ -1066,10 +1066,7 @@ const OrderPage = () => {
       )}
   </div>
 )}
-                        </>
-                      )}
-                  </div>
-                )}
+
               </div>
 
               <Button
