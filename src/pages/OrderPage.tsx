@@ -1067,8 +1067,6 @@ const OrderPage = () => {
         </div>
       </div>
       <Footer />
-    </div>
-  );
 };
 
 export default OrderPage;
