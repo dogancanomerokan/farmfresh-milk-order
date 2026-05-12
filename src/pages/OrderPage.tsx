@@ -1021,17 +1021,7 @@ const OrderPage = () => {
                   />
                 </div>
 
-                {(campaignLoading ||
-  (campaignResult &&
-    campaignResult.appliedCampaigns.length > 0)) && (
-  <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4 text-sm">
-    {campaignLoading && (
-      <p className="text-green-700">
-        Kampanyalar kontrol ediliyor...
-      </p>
-    )}
-
-    {!campaignLoading &&
+                   {!campaignLoading &&
       campaignResult &&
       campaignResult.appliedCampaigns.length > 0 && (
         <>
@@ -1084,7 +1074,11 @@ const OrderPage = () => {
             </form>
 
             <div className="lg:col-span-1">
-              <OrderSummary items={summaryItems} />
+              <OrderSummary
+  items={summaryItems}
+  campaignResult={campaignResult}
+  campaignLoading={campaignLoading}
+/>
             </div>
           </div>
         </div>
