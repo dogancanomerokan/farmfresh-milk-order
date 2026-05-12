@@ -352,7 +352,7 @@ export async function evaluateCampaigns(
 
     if (!eligible) continue;
 
-   for (const reward of campaign.campaign_rewards || []) {
+for (const reward of campaign.campaign_rewards || []) {
   if (campaign.campaign_rule_types?.code === "monthly_volume_gift") {
     const appliedReward = await applyMonthlyVolumeReward(
       campaign,
