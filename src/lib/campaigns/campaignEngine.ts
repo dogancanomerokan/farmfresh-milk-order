@@ -238,25 +238,35 @@ export async function fetchActiveCampaigns(): Promise<Campaign[]> {
     )
     .eq("is_active", true);
 
-  if (error) {
-    console.error("Active campaigns fetch failed:", error);
-    return [];
-  }
-
-  return (data || []) as Campaign[];
+ if (error) {
+  console.error("Active campaigns fetch failed:", error);
+  return [];
 }
+
+console.log("ACTIVE CAMPAIGNS:", data);
+
+return (data || []) as Campaign[];
 
 export async function evaluateCampaigns(
   input: CampaignEvaluationInput
 ): Promise<CampaignEvaluationResult> {
   const campaigns = await fetchActiveCampaigns();
 
-  const appliedCampaigns: AppliedCampaign[] = [];
+console.log("CAMPAIGNS COUNT:", campaigns.length);
 
-  for (const campaign of campaigns) {
-    const eligible = await isCampaignEligible(campaign, input);
+const appliedCampaigns: AppliedCampaign[] = [];
 
-    if (!eligible) continue;
+  const eligible = await isCampaignEligible(campaign, input);
+
+console.log("CAMPAIGN ELIGIBILITY:", {
+  title: campaign.title,
+  ruleCode: campaign.campaign_rule_types?.code,
+  conditions: campaign.campaign_conditions,
+  rewards: campaign.campaign_rewards,
+  eligible,
+});
+
+if (!eligible) continue;
 
     for (const reward of campaign.campaign_rewards || []) {
       appliedCampaigns.push(applyCampaignReward(campaign, reward, input));
