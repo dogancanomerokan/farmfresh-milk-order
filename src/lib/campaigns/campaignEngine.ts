@@ -353,16 +353,22 @@ export async function evaluateCampaigns(
     if (!eligible) continue;
 
 for (const reward of campaign.campaign_rewards || []) {
-  if (campaign.campaign_rule_types?.code === "monthly_volume_gift") {
-    const appliedReward = await applyMonthlyVolumeReward(
-      campaign,
-      reward,
-      input
-    );
+ if (campaign.campaign_rule_types?.code === "monthly_volume_gift") {
 
-    appliedCampaigns.push(appliedReward);
-    continue;
-  }
+  console.log("MONTHLY VOLUME PATH WORKING", {
+    ruleCode: campaign.campaign_rule_types?.code,
+    campaign,
+  });
+
+  const appliedReward = await applyMonthlyVolumeReward(
+    campaign,
+    reward,
+    input
+  );
+
+  appliedCampaigns.push(appliedReward);
+  continue;
+}
 
   appliedCampaigns.push(
     applyCampaignReward(campaign, reward, input)
