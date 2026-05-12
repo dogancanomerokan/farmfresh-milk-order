@@ -1054,8 +1054,6 @@ const OrderPage = () => {
           )}
         </>
       )}
-  </div>
-)}
 
               </div>
 
