@@ -48,6 +48,14 @@ const CampaignAdminPage = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
+
+const [editForm, setEditForm] = useState({
+  targetVolume: "",
+  rewardValue: "",
+  homepageText: "",
+});
+
   const formatDate = (value: string | null) => {
     if (!value) return "Süresiz";
     return new Date(value).toLocaleDateString("tr-TR");
