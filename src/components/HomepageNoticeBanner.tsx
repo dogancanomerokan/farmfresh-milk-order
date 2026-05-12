@@ -137,7 +137,7 @@ const HomepageNoticeBanner = () => {
         <div className="block lg:hidden fixed left-4 right-4 top-[72vh] z-50 [@media(orientation:landscape)]:hidden">
          <div
   key={`${activeMobileItem.type}-${mobileIndex}`}
-  className="rounded-2xl border border-white/20 bg-background/60 backdrop-blur-md shadow-md p-3 animate-in fade-in duration-500"
+  className="rounded-2xl border border-white/20 bg-background/60 backdrop-blur-md shadow-md p-3 animate-in fade-in duration-700"
 >
             <div className="flex items-start gap-3">
               <span className="text-lg">
