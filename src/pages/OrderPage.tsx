@@ -302,7 +302,14 @@ const OrderPage = () => {
           quantity: form.quantity2,
         }
       : null,
-  ].filter(Boolean);
+  ].filter(Boolean) as {
+    id: string;
+    name: string;
+    Volume: string;
+    unit: string;
+    price: number;
+    quantity: string;
+  }[];
 
   const subtotal = useMemo(() => {
     const quantityNumber = selectedProduct ? Number(form.quantity || 1) : 0;
@@ -392,9 +399,6 @@ const OrderPage = () => {
 
     runCampaignEvaluation();
   }, [campaignDependencyKey]);
-
-  const campaignDiscount = campaignResult?.totalDiscount || 0;
-  const finalTotal = campaignResult?.finalTotal ?? subtotal;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -495,7 +499,9 @@ const OrderPage = () => {
       }
 
       const finalTotalForOrder =
-        latestCampaignResult?.finalTotal ?? campaignResult?.finalTotal ?? totalAmount;
+        latestCampaignResult?.finalTotal ??
+        campaignResult?.finalTotal ??
+        totalAmount;
 
       const orderId = crypto.randomUUID();
 
@@ -641,6 +647,7 @@ const OrderPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+
       <div className="pt-24 pb-20">
         <div className="container mx-auto px-4 max-w-5xl">
           <div className="text-center mb-10">
@@ -1020,26 +1027,6 @@ const OrderPage = () => {
                     rows={2}
                   />
                 </div>
-
-                 
-          {campaignDiscount > 0 && (
-            <div className="mt-3 border-t border-green-200 pt-3 space-y-1">
-              <p className="text-green-800">
-                Ara toplam: {subtotal.toFixed(2)} TL
-              </p>
-
-              <p className="font-semibold text-green-800">
-                Toplam indirim: {campaignDiscount.toFixed(2)} TL
-              </p>
-
-              <p className="font-bold text-green-900">
-                Kampanyalı toplam: {finalTotal.toFixed(2)} TL
-              </p>
-            </div>
-          )}
-        </>
-      )}
-
               </div>
 
               <Button
@@ -1056,17 +1043,20 @@ const OrderPage = () => {
               </p>
             </form>
 
-           <div className="lg:col-span-1">
-  <OrderSummary
-    items={summaryItems}
-    campaignResult={campaignResult}
-    campaignLoading={campaignLoading}
-  />
-</div>
+            <div className="lg:col-span-1">
+              <OrderSummary
+                items={summaryItems}
+                campaignResult={campaignResult}
+                campaignLoading={campaignLoading}
+              />
+            </div>
           </div>
         </div>
       </div>
+
       <Footer />
+    </div>
+  );
 };
 
 export default OrderPage;
