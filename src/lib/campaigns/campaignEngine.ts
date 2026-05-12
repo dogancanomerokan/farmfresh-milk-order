@@ -7,6 +7,8 @@ import type {
   CampaignReward,
 } from "./types";
 
+console.log("CAMPAIGN ENGINE LOADED");
+
 function isTodayWithinCampaignDates(campaign: Campaign) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -49,7 +51,10 @@ function calculateRewardDiscount(
   return 0;
 }
 
-async function isFirstOrder(userId?: string | null, userEmail?: string | null) {
+async function isFirstOrder(
+  userId?: string | null,
+  userEmail?: string | null
+) {
   if (!userId && !userEmail) return false;
 
   let query = supabase
@@ -107,6 +112,7 @@ function getOrderTotalVolume(input: CampaignEvaluationInput) {
   return input.items.reduce((total, item) => {
     const volume = Number(item.volume || 0);
     const quantity = Number(item.quantity || 0);
+
     return total + volume * quantity;
   }, 0);
 }
@@ -115,14 +121,18 @@ async function getMonthlyDeliveredVolume(userId?: string | null) {
   if (!userId) return 0;
 
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+
+  const monthStart = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    1
+  )
     .toISOString()
     .slice(0, 10);
 
   const { data, error } = await supabase
     .from("order_items")
-    .select(
-      `
+    .select(`
       quantity,
       volume_snapshot,
       orders!inner (
@@ -130,8 +140,7 @@ async function getMonthlyDeliveredVolume(userId?: string | null) {
         status,
         delivery_date
       )
-    `
-    )
+    `)
     .eq("orders.user_id", userId)
     .eq("orders.status", "delivered")
     .gte("orders.delivery_date", monthStart);
@@ -142,7 +151,11 @@ async function getMonthlyDeliveredVolume(userId?: string | null) {
   }
 
   return (data || []).reduce((total: number, item: any) => {
-    return total + Number(item.volume_snapshot || 0) * Number(item.quantity || 0);
+    return (
+      total +
+      Number(item.volume_snapshot || 0) *
+        Number(item.quantity || 0)
+    );
   }, 0);
 }
 
@@ -151,12 +164,19 @@ async function isCampaignEligible(
   input: CampaignEvaluationInput
 ) {
   if (!campaign.is_active) return false;
+
   if (!isTodayWithinCampaignDates(campaign)) return false;
 
   const ruleCode = campaign.campaign_rule_types?.code;
 
-  if (ruleCode === "first_order_discount" || ruleCode === "first_order_gift") {
-    return await isFirstOrder(input.userId, input.userEmail);
+  if (
+    ruleCode === "first_order_discount" ||
+    ruleCode === "first_order_gift"
+  ) {
+    return await isFirstOrder(
+      input.userId,
+      input.userEmail
+    );
   }
 
   if (ruleCode === "weekday_discount") {
@@ -165,10 +185,15 @@ async function isCampaignEligible(
 
   if (ruleCode === "monthly_volume_reward") {
     const requiredVolume = Number(
-      getConditionValue(campaign, "monthly_volume_gte") || 0
+      getConditionValue(
+        campaign,
+        "monthly_volume_gte"
+      ) || 0
     );
 
-    const currentVolume = await getMonthlyDeliveredVolume(input.userId);
+    const currentVolume =
+      await getMonthlyDeliveredVolume(input.userId);
+
     const orderVolume = getOrderTotalVolume(input);
 
     return currentVolume + orderVolume >= requiredVolume;
@@ -182,12 +207,17 @@ function applyCampaignReward(
   reward: CampaignReward,
   input: CampaignEvaluationInput
 ): AppliedCampaign {
-  const discountAmount = calculateRewardDiscount(reward, input.subtotal);
+  const discountAmount = calculateRewardDiscount(
+    reward,
+    input.subtotal
+  );
 
   let message = campaign.title;
 
   if (reward.reward_type === "discount_amount") {
-    message = `${campaign.title}: ${discountAmount.toFixed(2)} TL indirim uygulandı.`;
+    message = `${campaign.title}: ${discountAmount.toFixed(
+      2
+    )} TL indirim uygulandı.`;
   }
 
   if (reward.reward_type === "discount_percent") {
@@ -195,7 +225,9 @@ function applyCampaignReward(
   }
 
   if (reward.reward_type === "free_liter") {
-    message = `${campaign.title}: ${reward.reward_value} ${reward.reward_unit || "L"} hediye kazandınız.`;
+    message = `${campaign.title}: ${reward.reward_value} ${
+      reward.reward_unit || "L"
+    } hediye kazandınız.`;
   }
 
   return {
@@ -212,8 +244,7 @@ function applyCampaignReward(
 export async function fetchActiveCampaigns(): Promise<Campaign[]> {
   const { data, error } = await supabase
     .from("campaigns")
-    .select(
-      `
+    .select(`
       *,
       campaign_rule_types (
         id,
@@ -234,57 +265,79 @@ export async function fetchActiveCampaigns(): Promise<Campaign[]> {
         reward_value,
         reward_unit
       )
-    `
-    )
+    `)
     .eq("is_active", true);
 
- if (error) {
-  console.error("Active campaigns fetch failed:", error);
-  return [];
-}
+  if (error) {
+    console.error(
+      "Active campaigns fetch failed:",
+      error
+    );
+    return [];
+  }
 
-console.log("ACTIVE CAMPAIGNS:", data);
+  console.log("ACTIVE CAMPAIGNS:", data);
 
-return (data || []) as Campaign[];
+  return (data || []) as Campaign[];
 }
 
 export async function evaluateCampaigns(
   input: CampaignEvaluationInput
 ): Promise<CampaignEvaluationResult> {
+  console.log("EVALUATE CAMPAIGNS RUNNING");
+  console.log("INPUT:", input);
+
   const campaigns = await fetchActiveCampaigns();
 
-console.log("CAMPAIGNS COUNT:", campaigns.length);
+  console.log("CAMPAIGNS COUNT:", campaigns.length);
 
-const appliedCampaigns: AppliedCampaign[] = [];
+  const appliedCampaigns: AppliedCampaign[] = [];
 
-  const eligible = await isCampaignEligible(campaign, input);
+  for (const campaign of campaigns) {
+    const eligible = await isCampaignEligible(
+      campaign,
+      input
+    );
 
-console.log("CAMPAIGN ELIGIBILITY:", {
-  title: campaign.title,
-  ruleCode: campaign.campaign_rule_types?.code,
-  conditions: campaign.campaign_conditions,
-  rewards: campaign.campaign_rewards,
-  eligible,
-});
+    console.log("CAMPAIGN ELIGIBILITY:", {
+      title: campaign.title,
+      ruleCode:
+        campaign.campaign_rule_types?.code,
+      conditions: campaign.campaign_conditions,
+      rewards: campaign.campaign_rewards,
+      eligible,
+    });
 
-if (!eligible) continue;
+    if (!eligible) continue;
 
     for (const reward of campaign.campaign_rewards || []) {
-      appliedCampaigns.push(applyCampaignReward(campaign, reward, input));
+      appliedCampaigns.push(
+        applyCampaignReward(
+          campaign,
+          reward,
+          input
+        )
+      );
     }
   }
 
   const totalDiscount = appliedCampaigns.reduce(
-    (total, campaign) => total + campaign.discountAmount,
+    (total, campaign) =>
+      total + campaign.discountAmount,
     0
   );
 
-  const finalTotal = Math.max(input.subtotal - totalDiscount, 0);
+  const finalTotal = Math.max(
+    input.subtotal - totalDiscount,
+    0
+  );
 
   return {
     appliedCampaigns,
     totalDiscount,
     finalTotal,
-    messages: appliedCampaigns.map((campaign) => campaign.message),
+    messages: appliedCampaigns.map(
+      (campaign) => campaign.message
+    ),
   };
 }
