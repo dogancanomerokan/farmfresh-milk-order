@@ -1022,46 +1022,48 @@ const OrderPage = () => {
                 </div>
 
                 {(campaignLoading ||
-                  (campaignResult &&
-                    campaignResult.appliedCampaigns.length > 0)) && (
-                  <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm">
-                    {campaignLoading && (
-                      <p className="text-green-700">
-                        Kampanyalar kontrol ediliyor...
-                      </p>
-                    )}
-
-                    {!campaignLoading
-                      {campaignResult &&
- campaignResult.appliedCampaigns.length > 0 && (
+  (campaignResult &&
+    campaignResult.appliedCampaigns.length > 0)) && (
   <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4 text-sm">
-    <p className="font-semibold text-green-800">
-      Uygulanan Kampanyalar
-    </p>
-
-    <div className="mt-2 space-y-1">
-      {campaignResult.messages.map((message, index) => (
-        <p key={index} className="text-green-700">
-          {message}
-        </p>
-      ))}
-    </div>
-
-    {campaignDiscount > 0 && (
-      <div className="mt-3 border-t border-green-200 pt-3 space-y-1">
-        <p className="text-green-800">
-          Ara toplam: {subtotal.toFixed(2)} TL
-        </p>
-
-        <p className="font-semibold text-green-800">
-          Toplam indirim: {campaignDiscount.toFixed(2)} TL
-        </p>
-
-        <p className="font-bold text-green-900">
-          Kampanyalı toplam: {finalTotal.toFixed(2)} TL
-        </p>
-      </div>
+    {campaignLoading && (
+      <p className="text-green-700">
+        Kampanyalar kontrol ediliyor...
+      </p>
     )}
+
+    {!campaignLoading &&
+      campaignResult &&
+      campaignResult.appliedCampaigns.length > 0 && (
+        <>
+          <p className="font-semibold text-green-800">
+            Uygulanan Kampanyalar
+          </p>
+
+          <div className="mt-2 space-y-1">
+            {campaignResult.messages.map((message, index) => (
+              <p key={index} className="text-green-700">
+                {message}
+              </p>
+            ))}
+          </div>
+
+          {campaignDiscount > 0 && (
+            <div className="mt-3 border-t border-green-200 pt-3 space-y-1">
+              <p className="text-green-800">
+                Ara toplam: {subtotal.toFixed(2)} TL
+              </p>
+
+              <p className="font-semibold text-green-800">
+                Toplam indirim: {campaignDiscount.toFixed(2)} TL
+              </p>
+
+              <p className="font-bold text-green-900">
+                Kampanyalı toplam: {finalTotal.toFixed(2)} TL
+              </p>
+            </div>
+          )}
+        </>
+      )}
   </div>
 )}
                         </>
