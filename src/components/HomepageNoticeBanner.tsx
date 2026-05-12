@@ -10,32 +10,27 @@ const HomepageNoticeBanner = () => {
 
   const loadBannerData = async () => {
     try {
-      const { data: announcementData, error: announcementError } =
-        await supabase
-          .from("announcements")
-          .select("*")
-          .eq("is_active", true)
-          .eq("show_on_homepage", true)
-          .or(`start_date.is.null,start_date.lte.${today}`)
-          .or(`end_date.is.null,end_date.gte.${today}`)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+      const { data: announcementData, error: announcementError } = await supabase
+  .from("announcements")
+  .select("*")
+  .eq("is_active", true)
+  .eq("show_on_homepage", true)
+  .order("created_at", { ascending: false })
+  .limit(1)
+  .maybeSingle();
 
       if (announcementError) {
         console.error("Duyuru banner hatası:", announcementError);
       }
 
       const { data: campaignData, error: campaignError } = await supabase
-        .from("campaigns")
-        .select("*")
-        .eq("is_active", true)
-        .eq("show_on_homepage", true)
-        .or(`start_date.is.null,start_date.lte.${today}`)
-        .or(`end_date.is.null,end_date.gte.${today}`)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+  .from("campaigns")
+  .select("*")
+  .eq("is_active", true)
+  .eq("show_on_homepage", true)
+  .order("created_at", { ascending: false })
+  .limit(1)
+  .maybeSingle();
 
       if (campaignError) {
         console.error("Kampanya banner hatası:", campaignError);
