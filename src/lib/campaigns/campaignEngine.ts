@@ -204,6 +204,46 @@ async function isCampaignEligible(
   return true;
 }
 
+async function applyMonthlyVolumeReward(
+  campaign: Campaign,
+  reward: CampaignReward,
+  input: CampaignEvaluationInput
+): Promise<AppliedCampaign> {
+  const targetVolume = Number(
+    getConditionValue(campaign, "monthly_volume_gte") || 0
+  );
+
+  const orderVolume = getOrderTotalVolume(input);
+
+  const progress = await calculateMonthlyLoyaltyProgress({
+    userId: input.userId,
+    campaignId: campaign.id,
+    campaignTitle: campaign.title,
+    orderVolume,
+    targetVolume,
+    rewardValue: Number(reward.reward_value || 0),
+    rewardUnit: reward.reward_unit || "L",
+  });
+
+  return {
+    campaignId: campaign.id,
+    title: campaign.title,
+    rewardType: reward.reward_type,
+    rewardValue: Number(reward.reward_value || 0),
+    rewardUnit: reward.reward_unit,
+    discountAmount: 0,
+    message: progress.message,
+    progress: {
+      currentVolume: progress.currentVolume,
+      orderVolume: progress.orderVolume,
+      totalAfterOrder: progress.totalAfterOrder,
+      targetVolume: progress.targetVolume,
+      remainingVolume: progress.remainingVolume,
+      isUnlocked: progress.isUnlocked,
+    },
+  };
+}
+
 function applyCampaignReward(
   campaign: Campaign,
   reward: CampaignReward,
