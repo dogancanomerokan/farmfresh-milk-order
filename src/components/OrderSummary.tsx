@@ -1,4 +1,5 @@
 import { ShoppingCart } from "lucide-react";
+import type { CampaignEvaluationResult } from "@/lib/campaigns/types";
 
 type SummaryItem = {
   id: string;
@@ -13,11 +14,25 @@ interface OrderSummaryProps {
   items: SummaryItem[];
 }
 
-const OrderSummary = ({ items }: OrderSummaryProps) => {
+const OrderSummary = ({
+  items,
+  campaignResult,
+  campaignLoading = false,
+}: OrderSummaryProps) => {
   const normalizedItems = items.map((item) => {
     const unitPrice = Number(item.price || 0);
     const qty = parseInt(item.quantity, 10) || 1;
     const lineTotal = unitPrice * qty;
+
+    const subtotal = items.reduce((total, item) => {
+  return total + Number(item.price || 0) * Number(item.quantity || 0);
+}, 0);
+
+const campaignDiscount = campaignResult?.totalDiscount || 0;
+const finalTotal = campaignResult?.finalTotal ?? subtotal;
+
+const hasCampaign =
+  campaignResult && campaignResult.appliedCampaigns.length > 0;
 
     return {
       ...item,
