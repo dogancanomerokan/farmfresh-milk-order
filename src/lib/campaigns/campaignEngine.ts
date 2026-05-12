@@ -352,15 +352,22 @@ export async function evaluateCampaigns(
 
     if (!eligible) continue;
 
-    for (const reward of campaign.campaign_rewards || []) {
-      appliedCampaigns.push(
-        applyCampaignReward(
-          campaign,
-          reward,
-          input
-        )
-      );
-    }
+   for (const reward of campaign.campaign_rewards || []) {
+  if (campaign.campaign_rule_types?.code === "monthly_volume_gift") {
+    const appliedReward = await applyMonthlyVolumeReward(
+      campaign,
+      reward,
+      input
+    );
+
+    appliedCampaigns.push(appliedReward);
+    continue;
+  }
+
+  appliedCampaigns.push(
+    applyCampaignReward(campaign, reward, input)
+  );
+}
   }
 
   const totalDiscount = appliedCampaigns.reduce(
