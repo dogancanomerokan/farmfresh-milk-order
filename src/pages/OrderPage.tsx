@@ -1021,22 +1021,7 @@ const OrderPage = () => {
                   />
                 </div>
 
-                   {!campaignLoading &&
-      campaignResult &&
-      campaignResult.appliedCampaigns.length > 0 && (
-        <>
-          <p className="font-semibold text-green-800">
-            Uygulanan Kampanyalar
-          </p>
-
-          <div className="mt-2 space-y-1">
-            {campaignResult.messages.map((message, index) => (
-              <p key={index} className="text-green-700">
-                {message}
-              </p>
-            ))}
-          </div>
-
+                 
           {campaignDiscount > 0 && (
             <div className="mt-3 border-t border-green-200 pt-3 space-y-1">
               <p className="text-green-800">
