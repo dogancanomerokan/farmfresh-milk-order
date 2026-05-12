@@ -1071,13 +1071,13 @@ const OrderPage = () => {
               </p>
             </form>
 
-            <div className="lg:col-span-1">
-              <OrderSummary
-  items={summaryItems}
-  campaignResult={campaignResult}
-  campaignLoading={campaignLoading}
-/>
-            </div>
+           <div className="lg:col-span-1">
+  <OrderSummary
+    items={summaryItems}
+    campaignResult={campaignResult}
+    campaignLoading={campaignLoading}
+  />
+</div>
           </div>
         </div>
       </div>
