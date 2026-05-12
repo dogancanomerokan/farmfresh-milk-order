@@ -48,46 +48,58 @@ const CampaignAdminPage = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
+  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(
+    null
+  );
 
-const [editForm, setEditForm] = useState({
-  targetVolume: "",
-  rewardValue: "",
-  homepageText: "",
-});
+  const [editForm, setEditForm] = useState({
+    targetVolume: "",
+    rewardValue: "",
+    homepageText: "",
+  });
 
   const formatDate = (value: string | null) => {
     if (!value) return "Süresiz";
     return new Date(value).toLocaleDateString("tr-TR");
   };
 
+  const getMonthlyTargetCondition = (campaign: Campaign) => {
+    return campaign.campaign_conditions?.find(
+      (condition) => condition.condition_key === "monthly_volume_gte"
+    );
+  };
+
+  const getFirstReward = (campaign: Campaign) => {
+    return campaign.campaign_rewards?.[0];
+  };
+
   const loadData = async () => {
     setLoading(true);
 
     try {
-     const { data: campaignData, error: campaignError } = await supabase
-  .from("campaigns")
-  .select(
-    `
-    *,
-    campaign_rule_types (
-      name,
-      code
-    ),
-    campaign_conditions (
-      id,
-      condition_key,
-      condition_value
-    ),
-    campaign_rewards (
-      id,
-      reward_type,
-      reward_value,
-      reward_unit
-    )
-  `
-  )
-  .order("created_at", { ascending: false });
+      const { data: campaignData, error: campaignError } = await supabase
+        .from("campaigns")
+        .select(
+          `
+          *,
+          campaign_rule_types (
+            name,
+            code
+          ),
+          campaign_conditions (
+            id,
+            condition_key,
+            condition_value
+          ),
+          campaign_rewards (
+            id,
+            reward_type,
+            reward_value,
+            reward_unit
+          )
+        `
+        )
+        .order("created_at", { ascending: false });
 
       if (campaignError) throw campaignError;
 
@@ -112,6 +124,107 @@ const [editForm, setEditForm] = useState({
   useEffect(() => {
     loadData();
   }, []);
+
+  const startEditCampaign = (campaign: Campaign) => {
+    const targetCondition = getMonthlyTargetCondition(campaign);
+    const reward = getFirstReward(campaign);
+
+    setEditingCampaignId(campaign.id);
+    setEditForm({
+      targetVolume: targetCondition?.condition_value || "",
+      rewardValue: reward?.reward_value ? String(reward.reward_value) : "",
+      homepageText: campaign.homepage_text || "",
+    });
+  };
+
+  const cancelEditCampaign = () => {
+    setEditingCampaignId(null);
+    setEditForm({
+      targetVolume: "",
+      rewardValue: "",
+      homepageText: "",
+    });
+  };
+
+  const saveCampaignEdit = async (campaign: Campaign) => {
+    try {
+      const targetCondition = getMonthlyTargetCondition(campaign);
+      const reward = getFirstReward(campaign);
+
+      const targetVolume = Number(editForm.targetVolume);
+      const rewardValue = Number(editForm.rewardValue);
+
+      if (!targetVolume || targetVolume <= 0) {
+        toast.error("Hedef litre geçerli olmalıdır");
+        return;
+      }
+
+      if (!rewardValue || rewardValue <= 0) {
+        toast.error("Hediye litre geçerli olmalıdır");
+        return;
+      }
+
+      const { error: campaignError } = await supabase
+        .from("campaigns")
+        .update({
+          homepage_text: editForm.homepageText || null,
+        })
+        .eq("id", campaign.id);
+
+      if (campaignError) throw campaignError;
+
+      if (targetCondition) {
+        const { error: conditionError } = await supabase
+          .from("campaign_conditions")
+          .update({
+            condition_value: String(targetVolume),
+          })
+          .eq("id", targetCondition.id);
+
+        if (conditionError) throw conditionError;
+      } else {
+        const { error: conditionInsertError } = await supabase
+          .from("campaign_conditions")
+          .insert({
+            campaign_id: campaign.id,
+            condition_key: "monthly_volume_gte",
+            condition_value: String(targetVolume),
+          });
+
+        if (conditionInsertError) throw conditionInsertError;
+      }
+
+      if (reward) {
+        const { error: rewardError } = await supabase
+          .from("campaign_rewards")
+          .update({
+            reward_value: rewardValue,
+            reward_unit: "L",
+          })
+          .eq("id", reward.id);
+
+        if (rewardError) throw rewardError;
+      } else {
+        const { error: rewardInsertError } = await supabase
+          .from("campaign_rewards")
+          .insert({
+            campaign_id: campaign.id,
+            reward_type: "free_liter",
+            reward_value: rewardValue,
+            reward_unit: "L",
+          });
+
+        if (rewardInsertError) throw rewardInsertError;
+      }
+
+      toast.success("Kampanya güncellendi");
+      cancelEditCampaign();
+      await loadData();
+    } catch (error: any) {
+      console.error("Kampanya güncellenemedi:", error);
+      toast.error(error.message || "Kampanya güncellenemedi");
+    }
+  };
 
   const toggleCampaignActive = async (id: string, currentValue: boolean) => {
     const { error } = await supabase
@@ -216,93 +329,193 @@ const [editForm, setEditForm] = useState({
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {campaigns.map((campaign) => (
-                    <div
-                      key={campaign.id}
-                      className="rounded-xl border border-border p-4"
-                    >
-                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-                        <div>
-                          <h3 className="font-semibold text-foreground">
-                            {campaign.title}
-                          </h3>
+                  {campaigns.map((campaign) => {
+                    const targetCondition = getMonthlyTargetCondition(campaign);
+                    const reward = getFirstReward(campaign);
 
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {campaign.description || "Açıklama yok"}
-                          </p>
+                    return (
+                      <div
+                        key={campaign.id}
+                        className="rounded-xl border border-border p-4"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                          <div>
+                            <h3 className="font-semibold text-foreground">
+                              {campaign.title}
+                            </h3>
 
-                          <p className="text-xs text-muted-foreground mt-2">
-                            Kural:{" "}
-                            {campaign.campaign_rule_types?.name ||
-                              "Kural tipi bulunamadı"}
-                          </p>
-
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Tarih: {formatDate(campaign.start_date)} -{" "}
-                            {formatDate(campaign.end_date)}
-                          </p>
-
-                          {campaign.homepage_text && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Ana sayfa metni: {campaign.homepage_text}
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {campaign.description || "Açıklama yok"}
                             </p>
-                          )}
-                        </div>
 
-                        <div className="flex flex-wrap gap-2 md:justify-end">
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-medium ${
-                              campaign.is_active
-                                ? "bg-primary/10 text-primary"
-                                : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            {campaign.is_active ? "Aktif" : "Pasif"}
-                          </span>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              Kural:{" "}
+                              {campaign.campaign_rule_types?.name ||
+                                "Kural tipi bulunamadı"}
+                            </p>
 
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-medium ${
-                              campaign.show_on_homepage
-                                ? "bg-primary/10 text-primary"
-                                : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            {campaign.show_on_homepage
-                              ? "Ana sayfada"
-                              : "Ana sayfada değil"}
-                          </span>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Tarih: {formatDate(campaign.start_date)} -{" "}
+                              {formatDate(campaign.end_date)}
+                            </p>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              toggleCampaignActive(
-                                campaign.id,
+                            {targetCondition && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Hedef litre: {targetCondition.condition_value} L
+                              </p>
+                            )}
+
+                            {reward && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Hediye: {reward.reward_value}{" "}
+                                {reward.reward_unit || "L"}
+                              </p>
+                            )}
+
+                            {campaign.homepage_text && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Ana sayfa metni: {campaign.homepage_text}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap gap-2 md:justify-end">
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-medium ${
                                 campaign.is_active
-                              )
-                            }
-                            className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-                          >
-                            {campaign.is_active ? "Pasif Yap" : "Aktif Yap"}
-                          </button>
+                                  ? "bg-primary/10 text-primary"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {campaign.is_active ? "Aktif" : "Pasif"}
+                            </span>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              toggleCampaignHomepage(
-                                campaign.id,
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-medium ${
                                 campaign.show_on_homepage
-                              )
-                            }
-                            className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-                          >
-                            {campaign.show_on_homepage
-                              ? "Ana Sayfadan Kaldır"
-                              : "Ana Sayfada Göster"}
-                          </button>
+                                  ? "bg-primary/10 text-primary"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {campaign.show_on_homepage
+                                ? "Ana sayfada"
+                                : "Ana sayfada değil"}
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                toggleCampaignActive(
+                                  campaign.id,
+                                  campaign.is_active
+                                )
+                              }
+                              className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                            >
+                              {campaign.is_active ? "Pasif Yap" : "Aktif Yap"}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                toggleCampaignHomepage(
+                                  campaign.id,
+                                  campaign.show_on_homepage
+                                )
+                              }
+                              className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                            >
+                              {campaign.show_on_homepage
+                                ? "Ana Sayfadan Kaldır"
+                                : "Ana Sayfada Göster"}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => startEditCampaign(campaign)}
+                              className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                            >
+                              Düzenle
+                            </button>
+                          </div>
                         </div>
+
+                        {editingCampaignId === campaign.id && (
+                          <div className="mt-4 rounded-xl border border-border bg-background p-4 space-y-4">
+                            <div className="grid md:grid-cols-3 gap-4">
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium text-muted-foreground">
+                                  Hedef Litre
+                                </label>
+                                <input
+                                  type="number"
+                                  value={editForm.targetVolume}
+                                  onChange={(e) =>
+                                    setEditForm((prev) => ({
+                                      ...prev,
+                                      targetVolume: e.target.value,
+                                    }))
+                                  }
+                                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium text-muted-foreground">
+                                  Hediye Litre
+                                </label>
+                                <input
+                                  type="number"
+                                  value={editForm.rewardValue}
+                                  onChange={(e) =>
+                                    setEditForm((prev) => ({
+                                      ...prev,
+                                      rewardValue: e.target.value,
+                                    }))
+                                  }
+                                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium text-muted-foreground">
+                                  Ana Sayfa Metni
+                                </label>
+                                <input
+                                  value={editForm.homepageText}
+                                  onChange={(e) =>
+                                    setEditForm((prev) => ({
+                                      ...prev,
+                                      homepageText: e.target.value,
+                                    }))
+                                  }
+                                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex gap-2 justify-end">
+                              <button
+                                type="button"
+                                onClick={cancelEditCampaign}
+                                className="rounded-full px-4 py-2 text-xs font-medium bg-muted text-foreground"
+                              >
+                                Vazgeç
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => saveCampaignEdit(campaign)}
+                                className="rounded-full px-4 py-2 text-xs font-medium bg-primary text-primary-foreground"
+                              >
+                                Kaydet
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </section>
