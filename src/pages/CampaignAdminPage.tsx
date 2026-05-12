@@ -19,6 +19,17 @@ type Campaign = {
     name: string;
     code: string;
   } | null;
+  campaign_conditions?: {
+    id: string;
+    condition_key: string;
+    condition_value: string;
+  }[];
+  campaign_rewards?: {
+    id: string;
+    reward_type: string;
+    reward_value: number;
+    reward_unit: string | null;
+  }[];
 };
 
 type Announcement = {
@@ -46,18 +57,29 @@ const CampaignAdminPage = () => {
     setLoading(true);
 
     try {
-      const { data: campaignData, error: campaignError } = await supabase
-        .from("campaigns")
-        .select(
-          `
-          *,
-          campaign_rule_types (
-            name,
-            code
-          )
-        `
-        )
-        .order("created_at", { ascending: false });
+     const { data: campaignData, error: campaignError } = await supabase
+  .from("campaigns")
+  .select(
+    `
+    *,
+    campaign_rule_types (
+      name,
+      code
+    ),
+    campaign_conditions (
+      id,
+      condition_key,
+      condition_value
+    ),
+    campaign_rewards (
+      id,
+      reward_type,
+      reward_value,
+      reward_unit
+    )
+  `
+  )
+  .order("created_at", { ascending: false });
 
       if (campaignError) throw campaignError;
 
