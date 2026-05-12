@@ -21,6 +21,9 @@ const OrderSummary = ({
   campaignResult,
   campaignLoading = false,
 }: OrderSummaryProps) => {
+  
+  console.log("ORDER SUMMARY CAMPAIGN RESULT:", campaignResult);
+  
   const normalizedItems = items.map((item) => {
     const unitPrice = Number(item.price || 0);
     const qty = parseInt(item.quantity, 10) || 1;
