@@ -76,6 +76,14 @@ export interface AppliedCampaign {
   rewardUnit?: string | null;
   discountAmount: number;
   message: string;
+  progress?: {
+    currentVolume: number;
+    orderVolume: number;
+    totalAfterOrder: number;
+    targetVolume: number;
+    remainingVolume: number;
+    isUnlocked: boolean;
+  };
 }
 
 export interface CampaignEvaluationResult {
