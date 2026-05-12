@@ -1,4 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
+import { calculateMonthlyLoyaltyProgress } from "./progressEngine";
+
 import type {
   AppliedCampaign,
   Campaign,
