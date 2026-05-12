@@ -12,6 +12,8 @@ type SummaryItem = {
 
 interface OrderSummaryProps {
   items: SummaryItem[];
+  campaignResult?: CampaignEvaluationResult | null;
+  campaignLoading?: boolean;
 }
 
 const OrderSummary = ({
@@ -24,16 +26,6 @@ const OrderSummary = ({
     const qty = parseInt(item.quantity, 10) || 1;
     const lineTotal = unitPrice * qty;
 
-    const subtotal = items.reduce((total, item) => {
-  return total + Number(item.price || 0) * Number(item.quantity || 0);
-}, 0);
-
-const campaignDiscount = campaignResult?.totalDiscount || 0;
-const finalTotal = campaignResult?.finalTotal ?? subtotal;
-
-const hasCampaign =
-  campaignResult && campaignResult.appliedCampaigns.length > 0;
-
     return {
       ...item,
       unitPrice,
@@ -42,10 +34,16 @@ const hasCampaign =
     };
   });
 
-  const grandTotal = normalizedItems.reduce(
+  const subtotal = normalizedItems.reduce(
     (sum, item) => sum + item.lineTotal,
     0
   );
+
+  const campaignDiscount = campaignResult?.totalDiscount || 0;
+  const finalTotal = campaignResult?.finalTotal ?? subtotal;
+
+  const hasCampaign =
+    !!campaignResult && campaignResult.appliedCampaigns.length > 0;
 
   return (
     <div
@@ -97,11 +95,47 @@ const hasCampaign =
             </div>
           ))}
 
-          <div className="border-t border-border pt-4 flex justify-between">
-            <span className="font-semibold text-foreground">Toplam</span>
-            <span className="text-xl font-bold text-primary">
-              {grandTotal} ₺
-            </span>
+          <div className="border-t border-border pt-4 space-y-3">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Ara Toplam</span>
+              <span className="font-semibold text-foreground">
+                {subtotal.toFixed(0)} ₺
+              </span>
+            </div>
+
+            {campaignLoading && (
+              <p className="text-xs text-muted-foreground">
+                Kampanyalar kontrol ediliyor...
+              </p>
+            )}
+
+            {!campaignLoading && hasCampaign && (
+              <div className="rounded-xl border border-green-200 bg-green-50 p-3 space-y-2">
+                <p className="text-sm font-semibold text-green-800">
+                  Uygulanan Kampanyalar
+                </p>
+
+                {campaignResult?.messages.map((message, index) => (
+                  <p key={index} className="text-xs text-green-700">
+                    {message}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {campaignDiscount > 0 && (
+              <div className="flex justify-between text-sm font-medium text-green-700">
+                <span>Kampanya İndirimi</span>
+                <span>-{campaignDiscount.toFixed(0)} ₺</span>
+              </div>
+            )}
+
+            <div className="flex justify-between items-center border-t border-border pt-4">
+              <span className="font-semibold text-foreground">Toplam</span>
+              <span className="text-xl font-bold text-primary">
+                {finalTotal.toFixed(0)} ₺
+              </span>
+            </div>
           </div>
 
           <p className="text-xs text-muted-foreground text-center">
