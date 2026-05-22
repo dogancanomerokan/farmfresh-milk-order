@@ -416,19 +416,24 @@ const CampaignAdminPage = () => {
                             </button>
 
                             <button
-                              type="button"
-                              onClick={() =>
-                                toggleCampaignHomepage(
-                                  campaign.id,
-                                  campaign.show_on_homepage
-                                )
-                              }
-                              className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-                            >
-                              {campaign.show_on_homepage
-                                ? "Ana Sayfadan Kaldır"
-                                : "Ana Sayfada Göster"}
-                            </button>
+  type="button"
+  disabled={!campaign.is_active}
+  onClick={() =>
+    toggleCampaignHomepage(
+      campaign.id,
+      campaign.show_on_homepage
+    )
+  }
+  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+    !campaign.is_active
+      ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
+      : "bg-muted text-foreground hover:bg-primary/10 hover:text-primary"
+  }`}
+>
+  {campaign.show_on_homepage
+    ? "Ana Sayfadan Kaldır"
+    : "Ana Sayfada Göster"}
+</button>
 
                             <button
                               type="button"
