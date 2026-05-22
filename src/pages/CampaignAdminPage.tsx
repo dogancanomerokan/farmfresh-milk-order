@@ -40,6 +40,16 @@ type Announcement = {
   created_at: string;
 };
 
+const weekdayOptions = [
+  { value: "monday", label: "Pazartesi" },
+  { value: "tuesday", label: "Salı" },
+  { value: "wednesday", label: "Çarşamba" },
+  { value: "thursday", label: "Perşembe" },
+  { value: "friday", label: "Cuma" },
+  { value: "saturday", label: "Cumartesi" },
+  { value: "sunday", label: "Pazar" },
+];
+
 const CampaignAdminPage = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -47,9 +57,13 @@ const CampaignAdminPage = () => {
   const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
 
   const [editForm, setEditForm] = useState({
+    homepageText: "",
+    startDate: "",
+    endDate: "",
+    weekday: "",
+    discountPercent: "",
     targetVolume: "",
     rewardValue: "",
-    homepageText: "",
   });
 
   const formatDate = (value: string | null) => {
@@ -57,14 +71,10 @@ const CampaignAdminPage = () => {
     return new Date(value).toLocaleDateString("tr-TR");
   };
 
-  const getMonthlyTargetCondition = (campaign: Campaign) =>
-    campaign.campaign_conditions?.find(
-      (condition) => condition.condition_key === "monthly_volume_gte"
-    );
+  const getCondition = (campaign: Campaign, key: string) =>
+    campaign.campaign_conditions?.find((condition) => condition.condition_key === key);
 
-  const getFirstReward = (campaign: Campaign) => {
-    return campaign.campaign_rewards?.[0];
-  };
+  const getFirstReward = (campaign: Campaign) => campaign.campaign_rewards?.[0];
 
   const loadData = async () => {
     setLoading(true);
@@ -117,89 +127,156 @@ const CampaignAdminPage = () => {
   }, []);
 
   const startEditCampaign = (campaign: Campaign) => {
-    const targetCondition = getMonthlyTargetCondition(campaign);
+    const weekdayCondition = getCondition(campaign, "weekday");
+    const targetCondition = getCondition(campaign, "monthly_volume_gte");
     const reward = getFirstReward(campaign);
 
     setEditingCampaignId(campaign.id);
     setEditForm({
+      homepageText: campaign.homepage_text || "",
+      startDate: campaign.start_date || "",
+      endDate: campaign.end_date || "",
+      weekday: weekdayCondition?.condition_value || "",
+      discountPercent:
+        reward?.reward_type === "discount_percent" ? String(reward.reward_value) : "",
       targetVolume: targetCondition?.condition_value || "",
       rewardValue: reward?.reward_value ? String(reward.reward_value) : "",
-      homepageText: campaign.homepage_text || "",
     });
   };
 
   const cancelEditCampaign = () => {
     setEditingCampaignId(null);
     setEditForm({
+      homepageText: "",
+      startDate: "",
+      endDate: "",
+      weekday: "",
+      discountPercent: "",
       targetVolume: "",
       rewardValue: "",
-      homepageText: "",
     });
+  };
+
+  const upsertCondition = async (
+    campaign: Campaign,
+    key: string,
+    value: string
+  ) => {
+    const existingCondition = getCondition(campaign, key);
+
+    if (existingCondition) {
+      const { error } = await supabase
+        .from("campaign_conditions")
+        .update({ condition_value: value })
+        .eq("id", existingCondition.id);
+
+      if (error) throw error;
+      return;
+    }
+
+    const { error } = await supabase.from("campaign_conditions").insert({
+      campaign_id: campaign.id,
+      condition_key: key,
+      condition_value: value,
+    });
+
+    if (error) throw error;
   };
 
   const saveCampaignEdit = async (campaign: Campaign) => {
     try {
-      const targetCondition = getMonthlyTargetCondition(campaign);
+      const ruleCode = campaign.campaign_rule_types?.code;
       const reward = getFirstReward(campaign);
-
-      const targetVolume = Number(editForm.targetVolume);
-      const rewardValue = Number(editForm.rewardValue);
-
-      if (!targetVolume || targetVolume <= 0) {
-        toast.error("Hedef litre geçerli olmalıdır");
-        return;
-      }
-
-      if (!rewardValue || rewardValue <= 0) {
-        toast.error("Hediye litre geçerli olmalıdır");
-        return;
-      }
 
       const { error: campaignError } = await supabase
         .from("campaigns")
         .update({
           homepage_text: editForm.homepageText || null,
+          start_date: editForm.startDate || null,
+          end_date: editForm.endDate || null,
         })
         .eq("id", campaign.id);
 
       if (campaignError) throw campaignError;
 
-      if (targetCondition) {
-        const { error } = await supabase
-          .from("campaign_conditions")
-          .update({ condition_value: String(targetVolume) })
-          .eq("id", targetCondition.id);
+      if (ruleCode === "weekday_discount") {
+        const discountPercent = Number(editForm.discountPercent);
 
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("campaign_conditions").insert({
-          campaign_id: campaign.id,
-          condition_key: "monthly_volume_gte",
-          condition_value: String(targetVolume),
-        });
+        if (!editForm.weekday) {
+          toast.error("Geçerli gün seçilmelidir");
+          return;
+        }
 
-        if (error) throw error;
+        if (!discountPercent || discountPercent <= 0) {
+          toast.error("İndirim oranı geçerli olmalıdır");
+          return;
+        }
+
+        await upsertCondition(campaign, "weekday", editForm.weekday);
+
+        if (reward) {
+          const { error } = await supabase
+            .from("campaign_rewards")
+            .update({
+              reward_type: "discount_percent",
+              reward_value: discountPercent,
+              reward_unit: "percent",
+            })
+            .eq("id", reward.id);
+
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from("campaign_rewards").insert({
+            campaign_id: campaign.id,
+            reward_type: "discount_percent",
+            reward_value: discountPercent,
+            reward_unit: "percent",
+          });
+
+          if (error) throw error;
+        }
       }
 
-      if (reward) {
-        const { error } = await supabase
-          .from("campaign_rewards")
-          .update({
+      if (
+        ruleCode === "monthly_volume_gift" ||
+        ruleCode === "monthly_volume_reward"
+      ) {
+        const targetVolume = Number(editForm.targetVolume);
+        const rewardValue = Number(editForm.rewardValue);
+
+        if (!targetVolume || targetVolume <= 0) {
+          toast.error("Hedef litre geçerli olmalıdır");
+          return;
+        }
+
+        if (!rewardValue || rewardValue <= 0) {
+          toast.error("Hediye litre geçerli olmalıdır");
+          return;
+        }
+
+        await upsertCondition(campaign, "monthly_volume_gte", String(targetVolume));
+
+        if (reward) {
+          const { error } = await supabase
+            .from("campaign_rewards")
+            .update({
+              reward_type: "free_liter",
+              reward_value: rewardValue,
+              reward_unit: "L",
+            })
+            .eq("id", reward.id);
+
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from("campaign_rewards").insert({
+            campaign_id: campaign.id,
+            reward_type: "free_liter",
             reward_value: rewardValue,
             reward_unit: "L",
-          })
-          .eq("id", reward.id);
+          });
 
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("campaign_rewards").insert({
-          campaign_id: campaign.id,
-          reward_type: "free_liter",
-          reward_value: rewardValue,
-          reward_unit: "L",
-        });
-
-        if (error) throw error;
+          if (error) throw error;
+        }
       }
 
       toast.success("Kampanya güncellendi");
@@ -211,10 +288,7 @@ const CampaignAdminPage = () => {
     }
   };
 
-  const toggleCampaignActive = async (
-    id: string,
-    currentValue: boolean
-  ) => {
+  const toggleCampaignActive = async (id: string, currentValue: boolean) => {
     const nextActiveValue = !currentValue;
 
     const updatePayload: {
@@ -239,9 +313,7 @@ const CampaignAdminPage = () => {
     }
 
     toast.success(
-      nextActiveValue
-        ? "Kampanya aktif edildi"
-        : "Kampanya pasif yapıldı"
+      nextActiveValue ? "Kampanya aktif edildi" : "Kampanya pasif yapıldı"
     );
 
     await loadData();
@@ -349,7 +421,12 @@ const CampaignAdminPage = () => {
               ) : (
                 <div className="space-y-3">
                   {campaigns.map((campaign) => {
-                    const targetCondition = getMonthlyTargetCondition(campaign);
+                    const ruleCode = campaign.campaign_rule_types?.code;
+                    const weekdayCondition = getCondition(campaign, "weekday");
+                    const targetCondition = getCondition(
+                      campaign,
+                      "monthly_volume_gte"
+                    );
                     const reward = getFirstReward(campaign);
 
                     return (
@@ -378,17 +455,34 @@ const CampaignAdminPage = () => {
                               {formatDate(campaign.end_date)}
                             </p>
 
-                            {targetCondition && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Hedef litre: {targetCondition.condition_value} L
-                              </p>
+                            {ruleCode === "weekday_discount" && (
+                              <>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Gün:{" "}
+                                  {weekdayOptions.find(
+                                    (day) =>
+                                      day.value ===
+                                      weekdayCondition?.condition_value
+                                  )?.label || "Tanımsız"}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  İndirim: %{reward?.reward_value || 0}
+                                </p>
+                              </>
                             )}
 
-                            {reward && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Hediye: {reward.reward_value}{" "}
-                                {reward.reward_unit || "L"}
-                              </p>
+                            {(ruleCode === "monthly_volume_gift" ||
+                              ruleCode === "monthly_volume_reward") && (
+                              <>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Hedef litre:{" "}
+                                  {targetCondition?.condition_value || "-"} L
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Hediye: {reward?.reward_value || 0}{" "}
+                                  {reward?.reward_unit || "L"}
+                                </p>
+                              </>
                             )}
 
                             {campaign.homepage_text && (
@@ -467,17 +561,100 @@ const CampaignAdminPage = () => {
                         {editingCampaignId === campaign.id && (
                           <div className="mt-4 rounded-xl border border-border bg-background p-4 space-y-4">
                             <div className="grid md:grid-cols-3 gap-4">
+                              {ruleCode === "weekday_discount" && (
+                                <>
+                                  <div className="space-y-1">
+                                    <label className="text-xs font-medium text-muted-foreground">
+                                      Geçerli Gün
+                                    </label>
+                                    <select
+                                      value={editForm.weekday}
+                                      onChange={(e) =>
+                                        setEditForm((prev) => ({
+                                          ...prev,
+                                          weekday: e.target.value,
+                                        }))
+                                      }
+                                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                                    >
+                                      <option value="">Gün seçin</option>
+                                      {weekdayOptions.map((day) => (
+                                        <option key={day.value} value={day.value}>
+                                          {day.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+
+                                  <div className="space-y-1">
+                                    <label className="text-xs font-medium text-muted-foreground">
+                                      İndirim Oranı (%)
+                                    </label>
+                                    <input
+                                      type="number"
+                                      value={editForm.discountPercent}
+                                      onChange={(e) =>
+                                        setEditForm((prev) => ({
+                                          ...prev,
+                                          discountPercent: e.target.value,
+                                        }))
+                                      }
+                                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                                    />
+                                  </div>
+                                </>
+                              )}
+
+                              {(ruleCode === "monthly_volume_gift" ||
+                                ruleCode === "monthly_volume_reward") && (
+                                <>
+                                  <div className="space-y-1">
+                                    <label className="text-xs font-medium text-muted-foreground">
+                                      Hedef Litre
+                                    </label>
+                                    <input
+                                      type="number"
+                                      value={editForm.targetVolume}
+                                      onChange={(e) =>
+                                        setEditForm((prev) => ({
+                                          ...prev,
+                                          targetVolume: e.target.value,
+                                        }))
+                                      }
+                                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-1">
+                                    <label className="text-xs font-medium text-muted-foreground">
+                                      Hediye Litre
+                                    </label>
+                                    <input
+                                      type="number"
+                                      value={editForm.rewardValue}
+                                      onChange={(e) =>
+                                        setEditForm((prev) => ({
+                                          ...prev,
+                                          rewardValue: e.target.value,
+                                        }))
+                                      }
+                                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                                    />
+                                  </div>
+                                </>
+                              )}
+
                               <div className="space-y-1">
                                 <label className="text-xs font-medium text-muted-foreground">
-                                  Hedef Litre
+                                  Başlangıç Tarihi
                                 </label>
                                 <input
-                                  type="number"
-                                  value={editForm.targetVolume}
+                                  type="date"
+                                  value={editForm.startDate}
                                   onChange={(e) =>
                                     setEditForm((prev) => ({
                                       ...prev,
-                                      targetVolume: e.target.value,
+                                      startDate: e.target.value,
                                     }))
                                   }
                                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
@@ -486,22 +663,22 @@ const CampaignAdminPage = () => {
 
                               <div className="space-y-1">
                                 <label className="text-xs font-medium text-muted-foreground">
-                                  Hediye Litre
+                                  Bitiş Tarihi
                                 </label>
                                 <input
-                                  type="number"
-                                  value={editForm.rewardValue}
+                                  type="date"
+                                  value={editForm.endDate}
                                   onChange={(e) =>
                                     setEditForm((prev) => ({
                                       ...prev,
-                                      rewardValue: e.target.value,
+                                      endDate: e.target.value,
                                     }))
                                   }
                                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                                 />
                               </div>
 
-                              <div className="space-y-1">
+                              <div className="space-y-1 md:col-span-2">
                                 <label className="text-xs font-medium text-muted-foreground">
                                   Ana Sayfa Metni
                                 </label>
