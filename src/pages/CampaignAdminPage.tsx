@@ -15,10 +15,7 @@ type Campaign = {
   show_on_homepage: boolean;
   homepage_text: string | null;
   created_at: string;
-  campaign_rule_types?: {
-    name: string;
-    code: string;
-  } | null;
+  campaign_rule_types?: { name: string; code: string } | null;
   campaign_conditions?: {
     id: string;
     condition_key: string;
@@ -47,10 +44,7 @@ const CampaignAdminPage = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(
-    null
-  );
+  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
 
   const [editForm, setEditForm] = useState({
     targetVolume: "",
@@ -63,11 +57,10 @@ const CampaignAdminPage = () => {
     return new Date(value).toLocaleDateString("tr-TR");
   };
 
-  const getMonthlyTargetCondition = (campaign: Campaign) => {
-    return campaign.campaign_conditions?.find(
+  const getMonthlyTargetCondition = (campaign: Campaign) =>
+    campaign.campaign_conditions?.find(
       (condition) => condition.condition_key === "monthly_volume_gte"
     );
-  };
 
   const getFirstReward = (campaign: Campaign) => {
     return campaign.campaign_rewards?.[0];
@@ -79,8 +72,7 @@ const CampaignAdminPage = () => {
     try {
       const { data: campaignData, error: campaignError } = await supabase
         .from("campaigns")
-        .select(
-          `
+        .select(`
           *,
           campaign_rule_types (
             name,
@@ -97,8 +89,7 @@ const CampaignAdminPage = () => {
             reward_value,
             reward_unit
           )
-        `
-        )
+        `)
         .order("created_at", { ascending: false });
 
       if (campaignError) throw campaignError;
@@ -174,28 +165,24 @@ const CampaignAdminPage = () => {
       if (campaignError) throw campaignError;
 
       if (targetCondition) {
-        const { error: conditionError } = await supabase
+        const { error } = await supabase
           .from("campaign_conditions")
-          .update({
-            condition_value: String(targetVolume),
-          })
+          .update({ condition_value: String(targetVolume) })
           .eq("id", targetCondition.id);
 
-        if (conditionError) throw conditionError;
+        if (error) throw error;
       } else {
-        const { error: conditionInsertError } = await supabase
-          .from("campaign_conditions")
-          .insert({
-            campaign_id: campaign.id,
-            condition_key: "monthly_volume_gte",
-            condition_value: String(targetVolume),
-          });
+        const { error } = await supabase.from("campaign_conditions").insert({
+          campaign_id: campaign.id,
+          condition_key: "monthly_volume_gte",
+          condition_value: String(targetVolume),
+        });
 
-        if (conditionInsertError) throw conditionInsertError;
+        if (error) throw error;
       }
 
       if (reward) {
-        const { error: rewardError } = await supabase
+        const { error } = await supabase
           .from("campaign_rewards")
           .update({
             reward_value: rewardValue,
@@ -203,18 +190,16 @@ const CampaignAdminPage = () => {
           })
           .eq("id", reward.id);
 
-        if (rewardError) throw rewardError;
+        if (error) throw error;
       } else {
-        const { error: rewardInsertError } = await supabase
-          .from("campaign_rewards")
-          .insert({
-            campaign_id: campaign.id,
-            reward_type: "free_liter",
-            reward_value: rewardValue,
-            reward_unit: "L",
-          });
+        const { error } = await supabase.from("campaign_rewards").insert({
+          campaign_id: campaign.id,
+          reward_type: "free_liter",
+          reward_value: rewardValue,
+          reward_unit: "L",
+        });
 
-        if (rewardInsertError) throw rewardInsertError;
+        if (error) throw error;
       }
 
       toast.success("Kampanya güncellendi");
@@ -226,29 +211,39 @@ const CampaignAdminPage = () => {
     }
   };
 
-  const nextActiveValue = !currentValue;
+  const toggleCampaignActive = async (
+    id: string,
+    currentValue: boolean
+  ) => {
+    const nextActiveValue = !currentValue;
 
-const updatePayload: any = {
-  is_active: nextActiveValue,
-};
+    const updatePayload: {
+      is_active: boolean;
+      show_on_homepage?: boolean;
+    } = {
+      is_active: nextActiveValue,
+    };
 
-// Eğer kampanya pasife alınıyorsa
-// otomatik olarak homepage'den de kaldır
-if (!nextActiveValue) {
-  updatePayload.show_on_homepage = false;
-}
+    if (!nextActiveValue) {
+      updatePayload.show_on_homepage = false;
+    }
 
-const { error } = await supabase
-  .from("campaigns")
-  .update(updatePayload)
-  .eq("id", id);
+    const { error } = await supabase
+      .from("campaigns")
+      .update(updatePayload)
+      .eq("id", id);
 
     if (error) {
       toast.error(error.message || "Kampanya durumu güncellenemedi");
       return;
     }
 
-    toast.success("Kampanya durumu güncellendi");
+    toast.success(
+      nextActiveValue
+        ? "Kampanya aktif edildi"
+        : "Kampanya pasif yapıldı"
+    );
+
     await loadData();
   };
 
@@ -268,9 +263,22 @@ const { error } = await supabase
   };
 
   const toggleAnnouncementActive = async (id: string, currentValue: boolean) => {
+    const nextActiveValue = !currentValue;
+
+    const updatePayload: {
+      is_active: boolean;
+      show_on_homepage?: boolean;
+    } = {
+      is_active: nextActiveValue,
+    };
+
+    if (!nextActiveValue) {
+      updatePayload.show_on_homepage = false;
+    }
+
     const { error } = await supabase
       .from("announcements")
-      .update({ is_active: !currentValue })
+      .update(updatePayload)
       .eq("id", id);
 
     if (error) {
@@ -427,24 +435,24 @@ const { error } = await supabase
                             </button>
 
                             <button
-  type="button"
-  disabled={!campaign.is_active}
-  onClick={() =>
-    toggleCampaignHomepage(
-      campaign.id,
-      campaign.show_on_homepage
-    )
-  }
-  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-    !campaign.is_active
-      ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
-      : "bg-muted text-foreground hover:bg-primary/10 hover:text-primary"
-  }`}
->
-  {campaign.show_on_homepage
-    ? "Ana Sayfadan Kaldır"
-    : "Ana Sayfada Göster"}
-</button>
+                              type="button"
+                              disabled={!campaign.is_active}
+                              onClick={() =>
+                                toggleCampaignHomepage(
+                                  campaign.id,
+                                  campaign.show_on_homepage
+                                )
+                              }
+                              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                                !campaign.is_active
+                                  ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
+                                  : "bg-muted text-foreground hover:bg-primary/10 hover:text-primary"
+                              }`}
+                            >
+                              {campaign.show_on_homepage
+                                ? "Ana Sayfadan Kaldır"
+                                : "Ana Sayfada Göster"}
+                            </button>
 
                             <button
                               type="button"
@@ -614,13 +622,18 @@ const { error } = await supabase
 
                           <button
                             type="button"
+                            disabled={!announcement.is_active}
                             onClick={() =>
                               toggleAnnouncementHomepage(
                                 announcement.id,
                                 announcement.show_on_homepage
                               )
                             }
-                            className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                              !announcement.is_active
+                                ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
+                                : "bg-muted text-foreground hover:bg-primary/10 hover:text-primary"
+                            }`}
                           >
                             {announcement.show_on_homepage
                               ? "Ana Sayfadan Kaldır"
