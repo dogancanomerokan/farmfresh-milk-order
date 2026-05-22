@@ -175,36 +175,22 @@ async function isCampaignEligible(
     ruleCode === "first_order_discount" ||
     ruleCode === "first_order_gift"
   ) {
-    return await isFirstOrder(
-      input.userId,
-      input.userEmail
-    );
+    return await isFirstOrder(input.userId, input.userEmail);
   }
 
   if (ruleCode === "weekday_discount") {
     return isWeekdayMatch(campaign, input.deliveryDate);
   }
 
-  if (ruleCode === "monthly_volume_reward") {
-    const requiredVolume = Number(
-      getConditionValue(
-        campaign,
-        "monthly_volume_gte"
-      ) || 0
-    );
+  if (
+    ruleCode === "monthly_volume_gift" ||
+    ruleCode === "monthly_volume_reward"
+  ) {
+    return true;
+  }
 
-    const currentVolume =
-      await getMonthlyDeliveredVolume(input.userId);
-
-    const orderVolume = getOrderTotalVolume(input);
-
-if (
-  ruleCode === "monthly_volume_gift" ||
-  ruleCode === "monthly_volume_reward"
-) {
   return true;
 }
-
 async function applyMonthlyVolumeReward(
   campaign: Campaign,
   reward: CampaignReward,
