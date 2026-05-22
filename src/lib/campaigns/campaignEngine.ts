@@ -198,9 +198,10 @@ async function isCampaignEligible(
 
     const orderVolume = getOrderTotalVolume(input);
 
-    return currentVolume + orderVolume >= requiredVolume;
-  }
-
+if (
+  ruleCode === "monthly_volume_gift" ||
+  ruleCode === "monthly_volume_reward"
+) {
   return true;
 }
 
