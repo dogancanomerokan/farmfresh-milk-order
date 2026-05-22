@@ -226,11 +226,22 @@ const CampaignAdminPage = () => {
     }
   };
 
-  const toggleCampaignActive = async (id: string, currentValue: boolean) => {
-    const { error } = await supabase
-      .from("campaigns")
-      .update({ is_active: !currentValue })
-      .eq("id", id);
+  const nextActiveValue = !currentValue;
+
+const updatePayload: any = {
+  is_active: nextActiveValue,
+};
+
+// Eğer kampanya pasife alınıyorsa
+// otomatik olarak homepage'den de kaldır
+if (!nextActiveValue) {
+  updatePayload.show_on_homepage = false;
+}
+
+const { error } = await supabase
+  .from("campaigns")
+  .update(updatePayload)
+  .eq("id", id);
 
     if (error) {
       toast.error(error.message || "Kampanya durumu güncellenemedi");
