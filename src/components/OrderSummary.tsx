@@ -118,11 +118,36 @@ const OrderSummary = ({
                   Uygulanan Kampanyalar
                 </p>
 
-                {campaignResult?.messages.map((message, index) => (
-                  <p key={index} className="text-xs text-green-700">
-                    {message}
-                  </p>
-                ))}
+              {campaignResult?.appliedCampaigns.map((campaign, index) => (
+  <div key={`${campaign.campaignId}-${index}`} className="space-y-2">
+    <p className="text-xs text-green-700">
+      {campaign.message}
+    </p>
+
+    {campaign.progress && (
+      <div className="space-y-1">
+        <div className="h-2 w-full rounded-full bg-green-100 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-green-500 transition-all duration-500"
+            style={{
+              width: `${Math.min(
+                (campaign.progress.totalAfterOrder /
+                  campaign.progress.targetVolume) *
+                  100,
+                100
+              )}%`,
+            }}
+          />
+        </div>
+
+        <p className="text-[11px] text-green-700">
+          {campaign.progress.totalAfterOrder} /{" "}
+          {campaign.progress.targetVolume} L tamamlandı
+        </p>
+      </div>
+    )}
+  </div>
+))}
               </div>
             )}
 
