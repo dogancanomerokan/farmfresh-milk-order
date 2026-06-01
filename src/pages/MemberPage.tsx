@@ -15,6 +15,7 @@ import {
   Gift,
   Trophy,
   Milk,
+  Cow,
   ChevronRight,
   Clock,
 } from "lucide-react";
