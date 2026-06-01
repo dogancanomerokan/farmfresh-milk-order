@@ -5,7 +5,19 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Package, LogOut, Edit3, Save, X } from "lucide-react";
+import {
+  User,
+  Package,
+  LogOut,
+  Edit3,
+  Save,
+  X,
+  Gift,
+  Trophy,
+  Milk,
+  ChevronRight,
+  Clock,
+} from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -59,15 +71,43 @@ type MemberOrder = OrderRow & {
   items: OrderItemRow[];
 };
 
+type MonthlyProgress = {
+  id: string;
+  user_id: string;
+  year: number;
+  month: number;
+  total_liters: number;
+  reward_claimed: boolean;
+  vip_level: string | null;
+};
+
+type CustomerReward = {
+  id: string;
+  user_id: string;
+  campaign_id: string | null;
+  reward_type: string;
+  reward_value: number;
+  status: string;
+  earned_at: string;
+  used_at: string | null;
+  expires_at: string | null;
+};
+
 const MemberPage = () => {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [activeOrderTab, setActiveOrderTab] = useState<
+    "active" | "completed" | "cancelled"
+  >("active");
 
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [orders, setOrders] = useState<MemberOrder[]>([]);
+  const [monthlyProgress, setMonthlyProgress] =
+    useState<MonthlyProgress | null>(null);
+  const [customerRewards, setCustomerRewards] = useState<CustomerReward[]>([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -128,13 +168,12 @@ const MemberPage = () => {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
-      if (ordersError) {
-        throw ordersError;
-      }
+      if (ordersError) throw ordersError;
 
       const orderIds = (ordersData || []).map((o) => o.id);
 
       let itemsData: OrderItemRow[] = [];
+
       if (orderIds.length > 0) {
         const { data: fetchedItems, error: itemsError } = await supabase
           .from("order_items")
@@ -142,9 +181,7 @@ const MemberPage = () => {
           .in("order_id", orderIds)
           .order("created_at", { ascending: true });
 
-        if (itemsError) {
-          throw itemsError;
-        }
+        if (itemsError) throw itemsError;
 
         itemsData = fetchedItems || [];
       }
@@ -157,6 +194,26 @@ const MemberPage = () => {
         .filter((order) => order.items.length > 0);
 
       setOrders(mergedOrders);
+
+      const now = new Date();
+
+      const { data: progressData } = await supabase
+        .from("customer_monthly_progress")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("year", now.getFullYear())
+        .eq("month", now.getMonth() + 1)
+        .maybeSingle();
+
+      setMonthlyProgress(progressData || null);
+
+      const { data: rewardData } = await supabase
+        .from("customer_rewards")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("earned_at", { ascending: false });
+
+      setCustomerRewards(rewardData || []);
     } catch (error: any) {
       console.error("Member page load error:", error);
     } finally {
@@ -177,7 +234,10 @@ const MemberPage = () => {
   }, [navigate]);
 
   const activeOrders = useMemo(
-    () => orders.filter((o) => o.status !== "delivered" && o.status !== "cancelled"),
+    () =>
+      orders.filter(
+        (o) => o.status !== "delivered" && o.status !== "cancelled"
+      ),
     [orders]
   );
 
@@ -190,6 +250,18 @@ const MemberPage = () => {
     () => orders.filter((o) => o.status === "cancelled"),
     [orders]
   );
+
+  const selectedOrders =
+    activeOrderTab === "active"
+      ? activeOrders
+      : activeOrderTab === "completed"
+      ? completedOrders
+      : cancelledOrders;
+
+  const loyaltyTarget = 50;
+  const currentLiters = Number(monthlyProgress?.total_liters || 0);
+  const progressPercent = Math.min((currentLiters / loyaltyTarget) * 100, 100);
+  const remainingLiters = Math.max(loyaltyTarget - currentLiters, 0);
 
   const startEdit = () => {
     setFormData({
@@ -261,61 +333,84 @@ const MemberPage = () => {
     }
   };
 
-  const getStatusClass = (status: string) => {
-    if (status === "delivered") return "bg-green-100 text-green-800";
-    if (status === "cancelled") return "bg-red-100 text-red-800";
-    if (status === "delivering") return "bg-blue-100 text-blue-800";
-    if (status === "preparing") return "bg-orange-100 text-orange-800";
-    if (status === "approved") return "bg-emerald-100 text-emerald-800";
-    return "bg-yellow-100 text-yellow-800";
+  const renderRewardTitle = (reward: CustomerReward) => {
+    if (reward.reward_type === "free_liter") {
+      return `${reward.reward_value}L Hediye Süt`;
+    }
+
+    return `${reward.reward_value} TL İndirim`;
   };
 
-  const renderOrderCard = (order: MemberOrder) => (
-    <div key={order.id} className="bg-card rounded-xl p-5" style={{ boxShadow: "var(--shadow-card)" }}>
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div className="space-y-2">
-          <div className="space-y-1">
-            {order.items.map((item) => (
-              <p key={item.id} className="font-semibold text-foreground">
-                {item.product_name_snapshot}
-                {item.volume_snapshot ? ` - ${item.volume_snapshot}` : ""}
-                {item.unit_snapshot ? ` ${item.unit_snapshot}` : ""} × {item.quantity}
-              </p>
-            ))}
-            <p className="text-sm text-muted-foreground">
-              📅 {format(parseISO(order.delivery_date), "d MMMM yyyy", { locale: tr })} · {order.time_slot}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              ⏱ Oluşturulma: {format(parseISO(order.created_at), "d MMMM yyyy HH:mm", { locale: tr })}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              📍 {order.il} / {order.ilce}
-              {order.mahalle ? ` / ${order.mahalle}` : ""} — {order.address}
-            </p>
-            {order.notes && (
-              <p className="text-sm text-muted-foreground">📝 {order.notes}</p>
-            )}
+  const renderOrderRow = (order: MemberOrder) => {
+    const firstItem = order.items[0];
+
+    return (
+      <div
+        key={order.id}
+        className="grid gap-4 border-b border-border px-4 py-4 last:border-b-0 md:grid-cols-[1.4fr_1.4fr_1fr_auto]"
+      >
+        <div className="flex items-start gap-3">
+          <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <Clock className="h-5 w-5 text-primary" />
           </div>
 
-          <div className="text-sm">
-            <span className="text-muted-foreground">Toplam:</span>{" "}
-            <span className="font-semibold text-foreground">{order.total_amount} TL</span>
+          <div>
+            <p className="font-semibold text-foreground">
+              {firstItem?.product_name_snapshot || "Sipariş"}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {order.items
+                .map(
+                  (item) =>
+                    `${item.product_name_snapshot}${
+                      item.volume_snapshot ? ` - ${item.volume_snapshot}` : ""
+                    }${item.unit_snapshot ? ` ${item.unit_snapshot}` : ""} × ${
+                      item.quantity
+                    }`
+                )
+                .join(", ")}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Durum: {getStatusLabel(order.status)}
+            </p>
           </div>
         </div>
 
-        <span className={`inline-flex items-center whitespace-nowrap shrink-0 self-start text-xs font-medium px-3 py-1 rounded-full ${getStatusClass(order.status)}`}>
-          {getStatusLabel(order.status)}
-        </span>
+        <div>
+          <p className="text-xs text-muted-foreground">Tahmini Teslimat</p>
+          <p className="font-medium text-foreground">
+            {format(parseISO(order.delivery_date), "d MMMM yyyy", {
+              locale: tr,
+            })}
+          </p>
+          <p className="text-sm text-muted-foreground">{order.time_slot}</p>
+        </div>
+
+        <div>
+          <p className="text-xs text-muted-foreground">Toplam Tutar</p>
+          <p className="font-semibold text-foreground">{order.total_amount} TL</p>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="self-center rounded-full"
+        >
+          Siparişi Görüntüle <ChevronRight className="ml-1 h-4 w-4" />
+        </Button>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="pt-24 pb-20 container mx-auto px-4 max-w-4xl">
-          <div className="bg-card rounded-2xl p-8 text-center" style={{ boxShadow: "var(--shadow-elevated)" }}>
+        <div className="container mx-auto max-w-5xl px-4 pb-20 pt-28">
+          <div
+            className="rounded-2xl bg-card p-8 text-center"
+            style={{ boxShadow: "var(--shadow-elevated)" }}
+          >
             <p className="text-muted-foreground">Yükleniyor...</p>
           </div>
         </div>
@@ -329,138 +424,403 @@ const MemberPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="pt-24 pb-20 container mx-auto px-4 max-w-4xl">
-        {/* Profile Section */}
-        <div className="bg-card rounded-2xl p-6 md:p-8 mb-8" style={{ boxShadow: "var(--shadow-elevated)" }}>
-          <div className="flex items-start justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="h-7 w-7 text-primary" />
+
+      <div className="container mx-auto max-w-6xl px-4 pb-20 pt-28">
+        <div className="mb-8">
+          <h1
+            className="text-4xl font-bold text-foreground"
+            style={{ fontFamily: "var(--font-heading)" }}
+          >
+            Üye Alanım
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Ana Sayfa › <span className="text-primary">Üye Alanım</span>
+          </p>
+        </div>
+
+        <div className="mb-8 grid gap-6 lg:grid-cols-[0.9fr_1.7fr]">
+          <div
+            className="rounded-2xl bg-card p-6"
+            style={{ boxShadow: "var(--shadow-card)" }}
+          >
+            <div className="flex items-center gap-5">
+              <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <User className="h-14 w-14 text-primary" />
               </div>
+
               <div>
-                <h1 className="text-2xl font-bold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
+                <p className="text-sm text-muted-foreground">Merhaba,</p>
+                <h2
+                  className="text-2xl font-bold text-foreground"
+                  style={{ fontFamily: "var(--font-heading)" }}
+                >
                   {profile?.full_name || "Üye"}
-                </h1>
-                <p className="text-sm text-muted-foreground">{authUser.email}</p>
+                </h2>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                    Üye
+                  </span>
+                  <span>•</span>
+                  <span>{authUser.email}</span>
+                </div>
+                {profile?.created_at && (
+                  <p className="mt-4 text-sm text-muted-foreground">
+                    Üyelik Tarihi:{" "}
+                    {format(parseISO(profile.created_at), "dd.MM.yyyy")}
+                  </p>
+                )}
               </div>
-            </div>
-            <div className="flex gap-2">
-              {!editing && (
-                <Button variant="outline" size="sm" onClick={startEdit}>
-                  <Edit3 className="h-4 w-4 mr-1" /> Düzenle
-                </Button>
-              )}
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-1" /> Çıkış
-              </Button>
             </div>
           </div>
 
-          {editing ? (
-            <div className="space-y-4 max-w-md">
-              <div className="space-y-2">
-                <Label>Ad Soyad</Label>
-                <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+          <div
+            className="rounded-2xl bg-card"
+            style={{ boxShadow: "var(--shadow-card)" }}
+          >
+            <div className="flex items-start justify-between border-b border-border p-6">
+              <div>
+                <h2 className="text-xl font-bold text-foreground">
+                  Profil Bilgilerim
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Kişisel bilgilerinizi güncelleyebilirsiniz.
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label>Telefon</Label>
-                <Input
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="05XX XXX XX XX"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Adres</Label>
-                <Input
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="Teslimat adresiniz"
-                />
-              </div>
+
               <div className="flex gap-2">
-                <Button size="sm" onClick={saveProfile}>
-                  <Save className="h-4 w-4 mr-1" /> Kaydet
+                {!editing && (
+                  <Button variant="outline" size="sm" onClick={startEdit}>
+                    <Edit3 className="mr-1 h-4 w-4" /> Düzenle
+                  </Button>
+                )}
+
+                <Button variant="ghost" size="sm" onClick={handleLogout}>
+                  <LogOut className="mr-1 h-4 w-4" /> Çıkış
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
-                  <X className="h-4 w-4 mr-1" /> İptal
-                </Button>
               </div>
             </div>
-          ) : (
-            <div className="grid sm:grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground">Telefon:</span>{" "}
-                <span className="text-foreground font-medium">{profile?.phone || "—"}</span>
+
+            <div className="p-6">
+              {editing ? (
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Ad Soyad</Label>
+                    <Input
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Telefon</Label>
+                    <Input
+                      value={formData.phone}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Adres</Label>
+                    <Input
+                      value={formData.address}
+                      onChange={(e) =>
+                        setFormData({ ...formData, address: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex gap-2 md:col-span-3">
+                    <Button size="sm" onClick={saveProfile}>
+                      <Save className="mr-1 h-4 w-4" /> Kaydet
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditing(false)}
+                    >
+                      <X className="mr-1 h-4 w-4" /> İptal
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-6 md:grid-cols-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Ad Soyad</p>
+                    <p className="font-medium text-foreground">
+                      {profile?.full_name || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Telefon</p>
+                    <p className="font-medium text-foreground">
+                      {profile?.phone || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Adres</p>
+                    <p className="font-medium text-foreground">
+                      {profile?.address || "—"}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="mb-8 rounded-2xl bg-card p-5 md:p-6"
+          style={{ boxShadow: "var(--shadow-elevated)" }}
+        >
+          <div className="mb-5 flex items-center gap-2">
+            <Gift className="h-6 w-6 text-primary" />
+            <h2
+              className="text-2xl font-bold text-foreground"
+              style={{ fontFamily: "var(--font-heading)" }}
+            >
+              Üye Alanım ve Kampanyalarım
+            </h2>
+          </div>
+
+          <div className="grid gap-5 lg:grid-cols-3">
+            <div className="rounded-2xl border border-border bg-background p-5">
+              <h3 className="font-bold text-foreground">
+                Aylık Sadakat İlerlemesi
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Bu ayki kazanımınız
+              </p>
+
+              <div className="relative mx-auto mt-5 flex h-72 w-72 max-w-full items-center justify-center">
+                <svg className="absolute inset-0 h-full w-full -rotate-90">
+                  <circle
+                    cx="50%"
+                    cy="50%"
+                    r="112"
+                    fill="none"
+                    stroke="hsl(var(--muted))"
+                    strokeWidth="10"
+                  />
+                  <circle
+                    cx="50%"
+                    cy="50%"
+                    r="112"
+                    fill="none"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth="10"
+                    strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 112}
+                    strokeDashoffset={
+                      2 * Math.PI * 112 * (1 - progressPercent / 100)
+                    }
+                  />
+                </svg>
+
+                <div className="relative flex flex-col items-center">
+                  <div className="relative h-32 w-20 overflow-hidden rounded-b-3xl rounded-t-md border-2 border-primary/30 bg-white">
+                    <div
+                      className="absolute bottom-0 left-0 right-0 bg-primary/20 transition-all"
+                      style={{ height: `${progressPercent}%` }}
+                    />
+                    <Milk className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 text-primary" />
+                  </div>
+
+                  <p className="mt-4 text-4xl font-bold text-primary">
+                    {currentLiters} L
+                  </p>
+                  <p className="text-sm text-muted-foreground">kazanılan</p>
+                  <span className="mt-2 rounded-full bg-primary/10 px-4 py-1 text-sm font-semibold text-primary">
+                    %{Math.round(progressPercent)}
+                  </span>
+                </div>
+
+                <span className="absolute bottom-4 left-6 text-xs text-muted-foreground">
+                  0 L
+                </span>
+                <span className="absolute top-4 left-1/2 -translate-x-1/2 text-xs text-muted-foreground">
+                  25 L
+                </span>
+                <span className="absolute bottom-4 right-6 text-xs text-muted-foreground">
+                  50 L
+                </span>
               </div>
-              <div>
-                <span className="text-muted-foreground">Adres:</span>{" "}
-                <span className="text-foreground font-medium">{profile?.address || "—"}</span>
+
+              <div className="mt-5 rounded-xl bg-primary/5 p-4 text-sm">
+                <p className="text-muted-foreground">
+                  {remainingLiters > 0
+                    ? `Bu ay ${remainingLiters} L daha kazanarak`
+                    : "Tebrikler! Harika gidiyorsunuz."}
+                </p>
+                <p className="font-semibold text-primary">
+                  {remainingLiters > 0
+                    ? "3L hediye süt kazanabilirsiniz."
+                    : "Hediyeniz hazır 🎁"}
+                </p>
               </div>
             </div>
-          )}
+
+            <div className="rounded-2xl border border-border bg-background p-5">
+              <h3 className="font-bold text-foreground">Kazanılan Ödüller</h3>
+              <p className="text-sm text-muted-foreground">
+                Kullanılabilir ödülleriniz
+              </p>
+
+              <div className="mt-5 space-y-3">
+                {customerRewards.length === 0 ? (
+                  <div className="rounded-xl border border-border p-5 text-sm text-muted-foreground">
+                    Henüz kazanılmış ödülünüz yok.
+                  </div>
+                ) : (
+                  customerRewards.slice(0, 3).map((reward) => (
+                    <div
+                      key={reward.id}
+                      className="flex items-center justify-between rounded-xl border border-border p-4"
+                    >
+                      <div>
+                        <p className="font-semibold text-foreground">
+                          {renderRewardTitle(reward)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Kazanım:{" "}
+                          {format(parseISO(reward.earned_at), "dd.MM.yyyy")}
+                        </p>
+                        <span
+                          className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                            reward.status === "earned"
+                              ? "bg-primary/10 text-primary"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {reward.status === "earned"
+                            ? "Kullanılabilir"
+                            : "Kullanıldı"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-primary">
+                        <span className="text-lg font-bold">
+                          {reward.reward_value}
+                        </span>
+                        <span className="text-sm">
+                          {reward.reward_type === "free_liter" ? "L" : "TL"}
+                        </span>
+                        <ChevronRight className="h-4 w-4" />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {customerRewards.length > 3 && (
+                <button className="mx-auto mt-5 flex items-center gap-1 text-sm font-semibold text-primary">
+                  Tüm ödülleri gör <ChevronRight className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-border bg-background p-5">
+              <h3 className="font-bold text-foreground">Üyelik Segmentiniz</h3>
+              <p className="text-sm text-muted-foreground">Sadakat seviyeniz</p>
+
+              <div className="mx-auto mt-6 flex h-56 w-56 items-center justify-center rounded-full border-4 border-primary bg-primary/5">
+                <div className="text-center">
+                  <Trophy className="mx-auto mb-3 h-12 w-12 text-primary" />
+                  <p className="text-2xl font-bold text-primary">
+                    {monthlyProgress?.vip_level || "Standart"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">0 - 99 L / Ay</p>
+                </div>
+              </div>
+
+              <div className="mt-6 rounded-xl bg-muted/40 p-4">
+                <p className="font-semibold text-foreground">
+                  Sonraki seviye: Silver
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Bu ay 50 L kazanarak Silver seviyesine yükselebilirsiniz.
+                </p>
+
+                <div className="mt-4 h-2 rounded-full bg-muted">
+                  <div
+                    className="h-2 rounded-full bg-primary"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+
+                <p className="mt-2 text-right text-sm text-muted-foreground">
+                  {currentLiters} / {loyaltyTarget} L
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Active Orders */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <Package className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-bold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
-              Aktif Siparişlerim
+        <div
+          className="rounded-2xl bg-card p-5 md:p-6"
+          style={{ boxShadow: "var(--shadow-elevated)" }}
+        >
+          <div className="mb-5 flex items-center gap-2">
+            <Package className="h-6 w-6 text-primary" />
+            <h2
+              className="text-2xl font-bold text-foreground"
+              style={{ fontFamily: "var(--font-heading)" }}
+            >
+              Siparişlerim
             </h2>
-            <span className="text-sm text-muted-foreground">({activeOrders.length})</span>
           </div>
 
-          {activeOrders.length === 0 ? (
-            <div className="text-center py-10 bg-card rounded-2xl" style={{ boxShadow: "var(--shadow-card)" }}>
-              <p className="text-muted-foreground">Aktif siparişiniz yok</p>
-              <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate("/order")}>
-                Yeni Sipariş Ver
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">{activeOrders.map(renderOrderCard)}</div>
-          )}
-        </div>
+          <div className="mb-4 flex flex-wrap gap-3">
+            <Button
+              variant={activeOrderTab === "active" ? "default" : "outline"}
+              onClick={() => setActiveOrderTab("active")}
+              className="rounded-full"
+            >
+              Aktif Siparişler ({activeOrders.length})
+            </Button>
 
-        {/* Completed Orders */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <Package className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-bold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
-              Tamamlanan Siparişler
-            </h2>
-            <span className="text-sm text-muted-foreground">({completedOrders.length})</span>
+            <Button
+              variant={activeOrderTab === "completed" ? "default" : "outline"}
+              onClick={() => setActiveOrderTab("completed")}
+              className="rounded-full"
+            >
+              Tamamlanan Siparişler ({completedOrders.length})
+            </Button>
+
+            <Button
+              variant={activeOrderTab === "cancelled" ? "default" : "outline"}
+              onClick={() => setActiveOrderTab("cancelled")}
+              className="rounded-full"
+            >
+              İptal Edilen Siparişler ({cancelledOrders.length})
+            </Button>
           </div>
 
-          {completedOrders.length === 0 ? (
-            <div className="text-center py-10 bg-card rounded-2xl" style={{ boxShadow: "var(--shadow-card)" }}>
-              <p className="text-muted-foreground">Tamamlanan siparişiniz yok</p>
-            </div>
-          ) : (
-            <div className="space-y-3">{completedOrders.map(renderOrderCard)}</div>
-          )}
-        </div>
-
-        {/* Cancelled Orders */}
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <Package className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-bold text-foreground" style={{ fontFamily: "var(--font-heading)" }}>
-              İptal Edilen Siparişler
-            </h2>
-            <span className="text-sm text-muted-foreground">({cancelledOrders.length})</span>
+          <div className="overflow-hidden rounded-2xl border border-border">
+            {selectedOrders.length === 0 ? (
+              <div className="p-10 text-center">
+                <p className="text-muted-foreground">Bu alanda sipariş yok.</p>
+                {activeOrderTab === "active" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                    onClick={() => navigate("/order")}
+                  >
+                    Yeni Sipariş Ver
+                  </Button>
+                )}
+              </div>
+            ) : (
+              selectedOrders.map(renderOrderRow)
+            )}
           </div>
-
-          {cancelledOrders.length === 0 ? (
-            <div className="text-center py-10 bg-card rounded-2xl" style={{ boxShadow: "var(--shadow-card)" }}>
-              <p className="text-muted-foreground">İptal edilen siparişiniz yok</p>
-            </div>
-          ) : (
-            <div className="space-y-3">{cancelledOrders.map(renderOrderCard)}</div>
-          )}
         </div>
       </div>
+
       <Footer />
     </div>
   );
