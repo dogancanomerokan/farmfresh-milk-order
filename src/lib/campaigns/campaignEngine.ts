@@ -308,6 +308,7 @@ export async function fetchActiveCampaigns(): Promise<Campaign[]> {
       )
     `)
     .eq("is_active", true);
+  .eq("is_archived", false);
 
   if (error) {
     console.error(
