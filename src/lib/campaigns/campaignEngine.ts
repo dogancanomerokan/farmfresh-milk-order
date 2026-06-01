@@ -307,7 +307,7 @@ export async function fetchActiveCampaigns(): Promise<Campaign[]> {
         reward_unit
       )
     `)
-    .eq("is_active", true);
+    .eq("is_active", true)
   .eq("is_archived", false);
 
   if (error) {
