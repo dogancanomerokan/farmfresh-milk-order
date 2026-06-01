@@ -1,9 +1,17 @@
 import { useEffect, useState } from "react";
-import { Megaphone, Gift } from "lucide-react";
+import { Megaphone, Gift, Plus } from "lucide-react";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabaseClient";
+
+type RuleType = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+};
 
 type Campaign = {
   id: string;
@@ -50,11 +58,31 @@ const weekdayOptions = [
   { value: "sunday", label: "Pazar" },
 ];
 
+const emptyCreateForm = {
+  title: "",
+  description: "",
+  ruleTypeId: "",
+  homepageText: "",
+  startDate: "",
+  endDate: "",
+  weekday: "",
+  discountPercent: "",
+  targetVolume: "",
+  rewardValue: "",
+};
+
 const CampaignAdminPage = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [ruleTypes, setRuleTypes] = useState<RuleType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
+
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createForm, setCreateForm] = useState(emptyCreateForm);
+
+  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(
+    null
+  );
 
   const [editForm, setEditForm] = useState({
     homepageText: "",
@@ -72,17 +100,32 @@ const CampaignAdminPage = () => {
   };
 
   const getCondition = (campaign: Campaign, key: string) =>
-    campaign.campaign_conditions?.find((condition) => condition.condition_key === key);
+    campaign.campaign_conditions?.find(
+      (condition) => condition.condition_key === key
+    );
 
   const getFirstReward = (campaign: Campaign) => campaign.campaign_rewards?.[0];
+
+  const selectedCreateRule = ruleTypes.find(
+    (rule) => rule.id === createForm.ruleTypeId
+  );
 
   const loadData = async () => {
     setLoading(true);
 
     try {
+      const { data: ruleTypeData, error: ruleTypeError } = await supabase
+        .from("campaign_rule_types")
+        .select("*")
+        .eq("is_active", true)
+        .order("name", { ascending: true });
+
+      if (ruleTypeError) throw ruleTypeError;
+
       const { data: campaignData, error: campaignError } = await supabase
         .from("campaigns")
-        .select(`
+        .select(
+          `
           *,
           campaign_rule_types (
             name,
@@ -99,7 +142,8 @@ const CampaignAdminPage = () => {
             reward_value,
             reward_unit
           )
-        `)
+        `
+        )
         .order("created_at", { ascending: false });
 
       if (campaignError) throw campaignError;
@@ -112,6 +156,7 @@ const CampaignAdminPage = () => {
 
       if (announcementError) throw announcementError;
 
+      setRuleTypes((ruleTypeData || []) as RuleType[]);
       setCampaigns((campaignData || []) as Campaign[]);
       setAnnouncements((announcementData || []) as Announcement[]);
     } catch (error: any) {
@@ -126,6 +171,161 @@ const CampaignAdminPage = () => {
     loadData();
   }, []);
 
+  const resetCreateForm = () => {
+    setCreateForm(emptyCreateForm);
+    setShowCreateForm(false);
+  };
+
+  const createCampaign = async () => {
+    try {
+      const selectedRule = ruleTypes.find(
+        (rule) => rule.id === createForm.ruleTypeId
+      );
+
+      if (!createForm.title.trim()) {
+        toast.error("Kampanya adı zorunludur");
+        return;
+      }
+
+      if (!selectedRule) {
+        toast.error("Kampanya tipi seçilmelidir");
+        return;
+      }
+
+      if (!createForm.startDate || !createForm.endDate) {
+        toast.error("Başlangıç ve bitiş tarihi zorunludur");
+        return;
+      }
+
+      if (selectedRule.code === "weekday_discount") {
+        if (!createForm.weekday) {
+          toast.error("Geçerli gün seçilmelidir");
+          return;
+        }
+
+        if (
+          !createForm.discountPercent ||
+          Number(createForm.discountPercent) <= 0
+        ) {
+          toast.error("İndirim oranı geçerli olmalıdır");
+          return;
+        }
+      }
+
+      if (
+        selectedRule.code === "monthly_volume_gift" ||
+        selectedRule.code === "monthly_volume_reward" ||
+        selectedRule.code === "monthly_volume_discount"
+      ) {
+        if (!createForm.targetVolume || Number(createForm.targetVolume) <= 0) {
+          toast.error("Hedef litre geçerli olmalıdır");
+          return;
+        }
+
+        if (!createForm.rewardValue || Number(createForm.rewardValue) <= 0) {
+          toast.error("Ödül değeri geçerli olmalıdır");
+          return;
+        }
+      }
+
+      const { data: createdCampaign, error: campaignError } = await supabase
+        .from("campaigns")
+        .insert({
+          title: createForm.title.trim(),
+          description: createForm.description || null,
+          rule_type_id: createForm.ruleTypeId,
+          start_date: createForm.startDate,
+          end_date: createForm.endDate,
+          homepage_text: createForm.homepageText || null,
+          is_active: true,
+          show_on_homepage: false,
+        })
+        .select()
+        .single();
+
+      if (campaignError) throw campaignError;
+
+      if (selectedRule.code === "weekday_discount") {
+        const { error: conditionError } = await supabase
+          .from("campaign_conditions")
+          .insert({
+            campaign_id: createdCampaign.id,
+            condition_key: "weekday",
+            condition_value: createForm.weekday,
+          });
+
+        if (conditionError) throw conditionError;
+
+        const { error: rewardError } = await supabase
+          .from("campaign_rewards")
+          .insert({
+            campaign_id: createdCampaign.id,
+            reward_type: "discount_percent",
+            reward_value: Number(createForm.discountPercent),
+            reward_unit: "percent",
+          });
+
+        if (rewardError) throw rewardError;
+      }
+
+      if (
+        selectedRule.code === "monthly_volume_gift" ||
+        selectedRule.code === "monthly_volume_reward"
+      ) {
+        const { error: conditionError } = await supabase
+          .from("campaign_conditions")
+          .insert({
+            campaign_id: createdCampaign.id,
+            condition_key: "monthly_volume_gte",
+            condition_value: createForm.targetVolume,
+          });
+
+        if (conditionError) throw conditionError;
+
+        const { error: rewardError } = await supabase
+          .from("campaign_rewards")
+          .insert({
+            campaign_id: createdCampaign.id,
+            reward_type: "free_liter",
+            reward_value: Number(createForm.rewardValue),
+            reward_unit: "L",
+          });
+
+        if (rewardError) throw rewardError;
+      }
+
+      if (selectedRule.code === "monthly_volume_discount") {
+        const { error: conditionError } = await supabase
+          .from("campaign_conditions")
+          .insert({
+            campaign_id: createdCampaign.id,
+            condition_key: "monthly_volume_gte",
+            condition_value: createForm.targetVolume,
+          });
+
+        if (conditionError) throw conditionError;
+
+        const { error: rewardError } = await supabase
+          .from("campaign_rewards")
+          .insert({
+            campaign_id: createdCampaign.id,
+            reward_type: "discount_amount",
+            reward_value: Number(createForm.rewardValue),
+            reward_unit: "TRY",
+          });
+
+        if (rewardError) throw rewardError;
+      }
+
+      toast.success("Kampanya oluşturuldu");
+      resetCreateForm();
+      await loadData();
+    } catch (error: any) {
+      console.error("Kampanya oluşturulamadı:", error);
+      toast.error(error.message || "Kampanya oluşturulamadı");
+    }
+  };
+
   const startEditCampaign = (campaign: Campaign) => {
     const weekdayCondition = getCondition(campaign, "weekday");
     const targetCondition = getCondition(campaign, "monthly_volume_gte");
@@ -138,7 +338,9 @@ const CampaignAdminPage = () => {
       endDate: campaign.end_date || "",
       weekday: weekdayCondition?.condition_value || "",
       discountPercent:
-        reward?.reward_type === "discount_percent" ? String(reward.reward_value) : "",
+        reward?.reward_type === "discount_percent"
+          ? String(reward.reward_value)
+          : "",
       targetVolume: targetCondition?.condition_value || "",
       rewardValue: reward?.reward_value ? String(reward.reward_value) : "",
     });
@@ -254,7 +456,11 @@ const CampaignAdminPage = () => {
           return;
         }
 
-        await upsertCondition(campaign, "monthly_volume_gte", String(targetVolume));
+        await upsertCondition(
+          campaign,
+          "monthly_volume_gte",
+          String(targetVolume)
+        );
 
         if (reward) {
           const { error } = await supabase
@@ -402,17 +608,253 @@ const CampaignAdminPage = () => {
         ) : (
           <div className="space-y-8">
             <section className="rounded-2xl border border-border bg-card p-5 md:p-6">
-              <div className="mb-5 flex items-center gap-2">
-                <Gift className="h-5 w-5 text-primary" />
-                <div>
-                  <h2 className="text-xl font-bold text-foreground">
-                    Kampanyalar
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Tanımlı kampanyaların durumlarını görüntüleyin ve yönetin.
-                  </p>
+              <div className="mb-5 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <Gift className="h-5 w-5 text-primary" />
+                  <div>
+                    <h2 className="text-xl font-bold text-foreground">
+                      Kampanyalar
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Tanımlı kampanyaların durumlarını görüntüleyin ve yönetin.
+                    </p>
+                  </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowCreateForm((prev) => !prev)}
+                  className="rounded-full px-4 py-2 text-sm font-medium bg-primary text-primary-foreground inline-flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Yeni Kampanya
+                </button>
               </div>
+
+              {showCreateForm && (
+                <div className="mb-5 rounded-xl border border-border bg-background p-4 space-y-4">
+                  <h3 className="font-semibold text-foreground">
+                    Yeni Kampanya Oluştur
+                  </h3>
+
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Kampanya Adı
+                      </label>
+                      <input
+                        value={createForm.title}
+                        onChange={(e) =>
+                          setCreateForm((prev) => ({
+                            ...prev,
+                            title: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Kampanya Tipi
+                      </label>
+                      <select
+                        value={createForm.ruleTypeId}
+                        onChange={(e) =>
+                          setCreateForm((prev) => ({
+                            ...prev,
+                            ruleTypeId: e.target.value,
+                            weekday: "",
+                            discountPercent: "",
+                            targetVolume: "",
+                            rewardValue: "",
+                          }))
+                        }
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="">Tip seçin</option>
+                        {ruleTypes.map((rule) => (
+                          <option key={rule.id} value={rule.id}>
+                            {rule.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Başlangıç Tarihi
+                      </label>
+                      <input
+                        type="date"
+                        value={createForm.startDate}
+                        onChange={(e) =>
+                          setCreateForm((prev) => ({
+                            ...prev,
+                            startDate: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Bitiş Tarihi
+                      </label>
+                      <input
+                        type="date"
+                        value={createForm.endDate}
+                        onChange={(e) =>
+                          setCreateForm((prev) => ({
+                            ...prev,
+                            endDate: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    {selectedCreateRule?.code === "weekday_discount" && (
+                      <>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">
+                            Geçerli Gün
+                          </label>
+                          <select
+                            value={createForm.weekday}
+                            onChange={(e) =>
+                              setCreateForm((prev) => ({
+                                ...prev,
+                                weekday: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                          >
+                            <option value="">Gün seçin</option>
+                            {weekdayOptions.map((day) => (
+                              <option key={day.value} value={day.value}>
+                                {day.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">
+                            İndirim Oranı (%)
+                          </label>
+                          <input
+                            type="number"
+                            value={createForm.discountPercent}
+                            onChange={(e) =>
+                              setCreateForm((prev) => ({
+                                ...prev,
+                                discountPercent: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {(selectedCreateRule?.code === "monthly_volume_gift" ||
+                      selectedCreateRule?.code === "monthly_volume_reward" ||
+                      selectedCreateRule?.code ===
+                        "monthly_volume_discount") && (
+                      <>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">
+                            Hedef Litre
+                          </label>
+                          <input
+                            type="number"
+                            value={createForm.targetVolume}
+                            onChange={(e) =>
+                              setCreateForm((prev) => ({
+                                ...prev,
+                                targetVolume: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">
+                            {selectedCreateRule?.code ===
+                            "monthly_volume_discount"
+                              ? "İndirim Tutarı (TL)"
+                              : "Hediye Litre"}
+                          </label>
+                          <input
+                            type="number"
+                            value={createForm.rewardValue}
+                            onChange={(e) =>
+                              setCreateForm((prev) => ({
+                                ...prev,
+                                rewardValue: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    <div className="space-y-1 md:col-span-3">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Açıklama
+                      </label>
+                      <input
+                        value={createForm.description}
+                        onChange={(e) =>
+                          setCreateForm((prev) => ({
+                            ...prev,
+                            description: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-1 md:col-span-3">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Ana Sayfa Metni
+                      </label>
+                      <input
+                        value={createForm.homepageText}
+                        onChange={(e) =>
+                          setCreateForm((prev) => ({
+                            ...prev,
+                            homepageText: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      type="button"
+                      onClick={resetCreateForm}
+                      className="rounded-full px-4 py-2 text-xs font-medium bg-muted text-foreground"
+                    >
+                      Vazgeç
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={createCampaign}
+                      className="rounded-full px-4 py-2 text-xs font-medium bg-primary text-primary-foreground"
+                    >
+                      Kaydet
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {campaigns.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
@@ -481,6 +923,18 @@ const CampaignAdminPage = () => {
                                 <p className="text-xs text-muted-foreground mt-1">
                                   Hediye: {reward?.reward_value || 0}{" "}
                                   {reward?.reward_unit || "L"}
+                                </p>
+                              </>
+                            )}
+
+                            {ruleCode === "monthly_volume_discount" && (
+                              <>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Hedef litre:{" "}
+                                  {targetCondition?.condition_value || "-"} L
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  İndirim: {reward?.reward_value || 0} TL
                                 </p>
                               </>
                             )}
@@ -579,7 +1033,10 @@ const CampaignAdminPage = () => {
                                     >
                                       <option value="">Gün seçin</option>
                                       {weekdayOptions.map((day) => (
-                                        <option key={day.value} value={day.value}>
+                                        <option
+                                          key={day.value}
+                                          value={day.value}
+                                        >
                                           {day.label}
                                         </option>
                                       ))}
