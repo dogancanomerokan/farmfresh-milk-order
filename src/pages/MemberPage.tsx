@@ -730,7 +730,7 @@ const MemberPage = () => {
 
               <div className="mx-auto mt-6 flex h-56 w-56 items-center justify-center rounded-full border-4 border-primary bg-primary/5">
                 <div className="text-center">
-                  <Trophy className="mx-auto mb-3 h-12 w-12 text-primary" />
+                  <Cow className="mx-auto mb-3 h-14 w-14 text-primary" />
                   <p className="text-2xl font-bold text-primary">
                     {monthlyProgress?.vip_level || "Standart"}
                   </p>
