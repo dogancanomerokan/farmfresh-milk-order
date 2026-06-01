@@ -622,14 +622,15 @@ const MemberPage = () => {
                 </svg>
 
                 <div className="relative flex flex-col items-center">
-                  <div className="relative h-32 w-20 overflow-hidden rounded-b-3xl rounded-t-md border-2 border-primary/30 bg-white">
-                    <div
-                      className="absolute bottom-0 left-0 right-0 bg-primary/20 transition-all"
-                      style={{ height: `${progressPercent}%` }}
-                    />
-                    <Milk className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 text-primary" />
-                  </div>
-
+                  <div className="relative h-36 w-24 overflow-hidden rounded-b-[2rem] rounded-t-lg border-2 border-primary/30 bg-white/80 shadow-sm">
+  <div
+    className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-primary/25 to-primary/5 transition-all duration-700"
+    style={{ height: `${progressPercent}%` }}
+  />
+  <div className="absolute left-3 right-3 top-3 h-2 rounded-full bg-primary/10" />
+  <div className="absolute inset-x-4 bottom-4 h-16 rounded-full bg-white/60 blur-sm" />
+  <Milk className="absolute left-1/2 top-1/2 h-11 w-11 -translate-x-1/2 -translate-y-1/2 text-primary" />
+</div>
                   <p className="mt-4 text-4xl font-bold text-primary">
                     {currentLiters} L
                   </p>
