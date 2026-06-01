@@ -392,12 +392,13 @@ const MemberPage = () => {
         </div>
 
         <Button
-          variant="outline"
-          size="sm"
-          className="self-center rounded-full"
-        >
-          Siparişi Görüntüle <ChevronRight className="ml-1 h-4 w-4" />
-        </Button>
+  variant="outline"
+  size="sm"
+  className="self-center rounded-full"
+  onClick={() => navigate(`/member/orders/${order.id}`)}
+>
+  Siparişi Görüntüle <ChevronRight className="ml-1 h-4 w-4" />
+</Button>
       </div>
     );
   };
