@@ -124,31 +124,30 @@ const CampaignAdminPage = () => {
       if (ruleTypeError) throw ruleTypeError;
 
       const { data: campaignData, error: campaignError } = await supabase
-        .from("campaigns")
-        .select(
-          `
-          *,
-          campaign_rule_types (
-            name,
-            code
-          ),
-          campaign_conditions (
-            id,
-            condition_key,
-            condition_value
-          ),
-          campaign_rewards (
-            id,
-            reward_type,
-            reward_value,
-            reward_unit
-          )
-        `
-        )
-        .eq("is_archived", false)
-        .order("created_at", { ascending: false });
+  .from("campaigns")
+  .select(
+    `
+    *,
+    campaign_rule_types (
+      name,
+      code
+    ),
+    campaign_conditions (
+      id,
+      condition_key,
+      condition_value
+    ),
+    campaign_rewards (
+      id,
+      reward_type,
+      reward_value,
+      reward_unit
+    )
+  `
+  )
+  .eq("is_archived", false)
+  .order("created_at", { ascending: false });
       
-
       if (campaignError) throw campaignError;
 
       const { data: announcementData, error: announcementError } =
