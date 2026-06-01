@@ -11,22 +11,28 @@ import type {
 
 console.log("CAMPAIGN ENGINE LOADED");
 
-function isTodayWithinCampaignDates(campaign: Campaign) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+function isDeliveryDateWithinCampaignDates(
+  campaign: Campaign,
+  deliveryDate: string
+) {
+  const delivery = new Date(deliveryDate);
+
+  delivery.setHours(0, 0, 0, 0);
 
   if (campaign.start_date) {
     const start = new Date(campaign.start_date);
+
     start.setHours(0, 0, 0, 0);
 
-    if (today < start) return false;
+    if (delivery < start) return false;
   }
 
   if (campaign.end_date) {
     const end = new Date(campaign.end_date);
+
     end.setHours(0, 0, 0, 0);
 
-    if (today > end) return false;
+    if (delivery > end) return false;
   }
 
   return true;
@@ -167,7 +173,13 @@ async function isCampaignEligible(
 ) {
   if (!campaign.is_active) return false;
 
-  if (!isTodayWithinCampaignDates(campaign)) return false;
+ if (
+  !isDeliveryDateWithinCampaignDates(
+    campaign,
+    input.deliveryDate
+  )
+)
+  return false;
 
   const ruleCode = campaign.campaign_rule_types?.code;
 
