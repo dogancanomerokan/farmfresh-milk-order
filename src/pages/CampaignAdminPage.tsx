@@ -79,6 +79,7 @@ const CampaignAdminPage = () => {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createForm, setCreateForm] = useState(emptyCreateForm);
+  const [creatingCampaign, setCreatingCampaign] = useState(false);
 
   const [editingCampaignId, setEditingCampaignId] = useState<string | null>(
     null
@@ -176,8 +177,12 @@ const CampaignAdminPage = () => {
     setShowCreateForm(false);
   };
 
-  const createCampaign = async () => {
-    try {
+ const createCampaign = async () => {
+  if (creatingCampaign) return;
+
+  setCreatingCampaign(true);
+
+  try {
       const selectedRule = ruleTypes.find(
         (rule) => rule.id === createForm.ruleTypeId
       );
@@ -321,9 +326,11 @@ const CampaignAdminPage = () => {
       resetCreateForm();
       await loadData();
     } catch (error: any) {
-      console.error("Kampanya oluşturulamadı:", error);
-      toast.error(error.message || "Kampanya oluşturulamadı");
-    }
+  console.error("Kampanya oluşturulamadı:", error);
+  toast.error(error.message || "Kampanya oluşturulamadı");
+} finally {
+  setCreatingCampaign(false);
+}
   };
 
   const startEditCampaign = (campaign: Campaign) => {
@@ -1162,12 +1169,13 @@ const CampaignAdminPage = () => {
                               </button>
 
                               <button
-                                type="button"
-                                onClick={() => saveCampaignEdit(campaign)}
-                                className="rounded-full px-4 py-2 text-xs font-medium bg-primary text-primary-foreground"
-                              >
-                                Kaydet
-                              </button>
+  type="button"
+  onClick={createCampaign}
+  disabled={creatingCampaign}
+  className="rounded-full px-4 py-2 text-xs font-medium bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+>
+  {creatingCampaign ? "Kaydediliyor..." : "Kaydet"}
+</button>
                             </div>
                           </div>
                         )}
