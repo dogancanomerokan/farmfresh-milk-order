@@ -21,6 +21,7 @@ type Campaign = {
   end_date: string | null;
   is_active: boolean;
   show_on_homepage: boolean;
+  is_archived?: boolean;
   homepage_text: string | null;
   created_at: string;
   campaign_rule_types?: { name: string; code: string } | null;
@@ -74,7 +75,8 @@ const emptyCreateForm = {
 const CampaignAdminPage = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [archivedCampaigns, setArchivedCampaigns] = useState<Campaign[]>([]);
-const [showArchivedCampaigns, setShowArchivedCampaigns] = useState(false);
+  const [showArchivedCampaigns, setShowArchivedCampaigns] = useState(false);
+
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [ruleTypes, setRuleTypes] = useState<RuleType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,57 +127,41 @@ const [showArchivedCampaigns, setShowArchivedCampaigns] = useState(false);
 
       if (ruleTypeError) throw ruleTypeError;
 
+      const campaignSelect = `
+        *,
+        campaign_rule_types (
+          name,
+          code
+        ),
+        campaign_conditions (
+          id,
+          condition_key,
+          condition_value
+        ),
+        campaign_rewards (
+          id,
+          reward_type,
+          reward_value,
+          reward_unit
+        )
+      `;
+
       const { data: campaignData, error: campaignError } = await supabase
-  .from("campaigns")
-  .select(
-    `
-    *,
-    campaign_rule_types (
-      name,
-      code
-    ),
-    campaign_conditions (
-      id,
-      condition_key,
-      condition_value
-    ),
-    campaign_rewards (
-      id,
-      reward_type,
-      reward_value,
-      reward_unit
-    )
-  `
-  )
-  .eq("is_archived", false)
-  .order("created_at", { ascending: false });
+        .from("campaigns")
+        .select(campaignSelect)
+        .eq("is_archived", false)
+        .order("created_at", { ascending: false });
+
+      if (campaignError) throw campaignError;
 
       const { data: archivedCampaignData, error: archivedCampaignError } =
-  await supabase
-    .from("campaigns")
-    .select(`
-      *,
-      campaign_rule_types (
-        name,
-        code
-      ),
-      campaign_conditions (
-        id,
-        condition_key,
-        condition_value
-      ),
-      campaign_rewards (
-        id,
-        reward_type,
-        reward_value,
-        reward_unit
-      )
-    `)
-    .eq("is_archived", true)
-    .order("created_at", { ascending: false });
+        await supabase
+          .from("campaigns")
+          .select(campaignSelect)
+          .eq("is_archived", true)
+          .order("created_at", { ascending: false });
 
-if (archivedCampaignError) throw archivedCampaignError;
-      if (campaignError) throw campaignError;
+      if (archivedCampaignError) throw archivedCampaignError;
 
       const { data: announcementData, error: announcementError } =
         await supabase
@@ -206,12 +192,12 @@ if (archivedCampaignError) throw archivedCampaignError;
     setShowCreateForm(false);
   };
 
- const createCampaign = async () => {
-  if (creatingCampaign) return;
+  const createCampaign = async () => {
+    if (creatingCampaign) return;
 
-  setCreatingCampaign(true);
+    setCreatingCampaign(true);
 
-  try {
+    try {
       const selectedRule = ruleTypes.find(
         (rule) => rule.id === createForm.ruleTypeId
       );
@@ -237,10 +223,7 @@ if (archivedCampaignError) throw archivedCampaignError;
           return;
         }
 
-        if (
-          !createForm.discountPercent ||
-          Number(createForm.discountPercent) <= 0
-        ) {
+        if (!createForm.discountPercent || Number(createForm.discountPercent) <= 0) {
           toast.error("İndirim oranı geçerli olmalıdır");
           return;
         }
@@ -273,6 +256,7 @@ if (archivedCampaignError) throw archivedCampaignError;
           homepage_text: createForm.homepageText || null,
           is_active: true,
           show_on_homepage: false,
+          is_archived: false,
         })
         .select()
         .single();
@@ -355,11 +339,11 @@ if (archivedCampaignError) throw archivedCampaignError;
       resetCreateForm();
       await loadData();
     } catch (error: any) {
-  console.error("Kampanya oluşturulamadı:", error);
-  toast.error(error.message || "Kampanya oluşturulamadı");
-} finally {
-  setCreatingCampaign(false);
-}
+      console.error("Kampanya oluşturulamadı:", error);
+      toast.error(error.message || "Kampanya oluşturulamadı");
+    } finally {
+      setCreatingCampaign(false);
+    }
   };
 
   const startEditCampaign = (campaign: Campaign) => {
@@ -576,74 +560,50 @@ if (archivedCampaignError) throw archivedCampaignError;
     await loadData();
   };
 
-const archiveCampaign = async (id: string) => {
-  const confirmed = window.confirm(
-    "Bu kampanyayı arşivlemek istediğinize emin misiniz?"
-  );
+  const archiveCampaign = async (id: string) => {
+    const confirmed = window.confirm(
+      "Bu kampanyayı arşivlemek istediğinize emin misiniz?"
+    );
 
-  if (!confirmed) return;
+    if (!confirmed) return;
 
-  const { error } = await supabase
-    .from("campaigns")
-    .update({
-      is_archived: true,
-      is_active: false,
-      show_on_homepage: false,
-    })
-    .eq("id", id);
+    const { error } = await supabase
+      .from("campaigns")
+      .update({
+        is_archived: true,
+        is_active: false,
+        show_on_homepage: false,
+      })
+      .eq("id", id);
 
-  if (error) {
-    toast.error(error.message || "Kampanya arşivlenemedi");
-    return;
-  }
+    if (error) {
+      toast.error(error.message || "Kampanya arşivlenemedi");
+      return;
+    }
 
-  toast.success("Kampanya arşivlendi");
-  await loadData();
-};
+    toast.success("Kampanya arşivlendi");
+    await loadData();
+  };
 
   const restoreCampaign = async (id: string) => {
-  const { error } = await supabase
-    .from("campaigns")
-    .update({
-      is_archived: false,
-      is_active: false,
-      show_on_homepage: false,
-    })
-    .eq("id", id);
+    const { error } = await supabase
+      .from("campaigns")
+      .update({
+        is_archived: false,
+        is_active: false,
+        show_on_homepage: false,
+      })
+      .eq("id", id);
 
-  if (error) {
-    toast.error(error.message || "Kampanya geri alınamadı");
-    return;
-  }
+    if (error) {
+      toast.error(error.message || "Kampanya geri alınamadı");
+      return;
+    }
 
-  toast.success("Kampanya arşivden çıkarıldı");
-  await loadData();
-};
-  
-  const archiveCampaign = async (id: string) => {
-  const confirmed = window.confirm(
-    "Bu kampanyayı arşivlemek istediğinize emin misiniz?"
-  );
+    toast.success("Kampanya arşivden çıkarıldı");
+    await loadData();
+  };
 
-  if (!confirmed) return;
-
-  const { error } = await supabase
-    .from("campaigns")
-    .update({
-      is_archived: true,
-      is_active: false,
-      show_on_homepage: false,
-    })
-    .eq("id", id);
-
-  if (error) {
-    toast.error(error.message || "Kampanya arşivlenemedi");
-    return;
-  }
-
-  toast.success("Kampanya arşivlendi");
-  await loadData();
-};
   const toggleAnnouncementActive = async (id: string, currentValue: boolean) => {
     const nextActiveValue = !currentValue;
 
@@ -688,6 +648,330 @@ const archiveCampaign = async (id: string) => {
 
     toast.success("Ana sayfa görünürlüğü güncellendi");
     await loadData();
+  };
+
+  const renderCampaignCard = (campaign: Campaign, archived = false) => {
+    const ruleCode = campaign.campaign_rule_types?.code;
+    const weekdayCondition = getCondition(campaign, "weekday");
+    const targetCondition = getCondition(campaign, "monthly_volume_gte");
+    const reward = getFirstReward(campaign);
+
+    return (
+      <div
+        key={campaign.id}
+        className={`rounded-xl border border-border p-4 ${
+          archived ? "bg-muted/30" : ""
+        }`}
+      >
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+          <div>
+            <h3
+              className={`font-semibold ${
+                archived ? "text-muted-foreground" : "text-foreground"
+              }`}
+            >
+              {campaign.title}
+            </h3>
+
+            <p className="text-sm text-muted-foreground mt-1">
+              {campaign.description || "Açıklama yok"}
+            </p>
+
+            <p className="text-xs text-muted-foreground mt-2">
+              Kural: {campaign.campaign_rule_types?.name || "Kural tipi yok"}
+            </p>
+
+            <p className="text-xs text-muted-foreground mt-1">
+              Tarih: {formatDate(campaign.start_date)} -{" "}
+              {formatDate(campaign.end_date)}
+            </p>
+
+            {ruleCode === "weekday_discount" && (
+              <>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Gün:{" "}
+                  {weekdayOptions.find(
+                    (day) => day.value === weekdayCondition?.condition_value
+                  )?.label || "Tanımsız"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  İndirim: %{reward?.reward_value || 0}
+                </p>
+              </>
+            )}
+
+            {(ruleCode === "monthly_volume_gift" ||
+              ruleCode === "monthly_volume_reward") && (
+              <>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Hedef litre: {targetCondition?.condition_value || "-"} L
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Hediye: {reward?.reward_value || 0}{" "}
+                  {reward?.reward_unit || "L"}
+                </p>
+              </>
+            )}
+
+            {ruleCode === "monthly_volume_discount" && (
+              <>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Hedef litre: {targetCondition?.condition_value || "-"} L
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  İndirim: {reward?.reward_value || 0} TL
+                </p>
+              </>
+            )}
+
+            {campaign.homepage_text && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Ana sayfa metni: {campaign.homepage_text}
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2 md:justify-end">
+            {archived ? (
+              <button
+                type="button"
+                onClick={() => restoreCampaign(campaign.id)}
+                className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+              >
+                Arşivden Çıkar
+              </button>
+            ) : (
+              <>
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${
+                    campaign.is_active
+                      ? "bg-primary/10 text-primary"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {campaign.is_active ? "Aktif" : "Pasif"}
+                </span>
+
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${
+                    campaign.show_on_homepage
+                      ? "bg-primary/10 text-primary"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {campaign.show_on_homepage
+                    ? "Ana sayfada"
+                    : "Ana sayfada değil"}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    toggleCampaignActive(campaign.id, campaign.is_active)
+                  }
+                  className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                >
+                  {campaign.is_active ? "Pasif Yap" : "Aktif Yap"}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={!campaign.is_active}
+                  onClick={() =>
+                    toggleCampaignHomepage(
+                      campaign.id,
+                      campaign.show_on_homepage
+                    )
+                  }
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    !campaign.is_active
+                      ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
+                      : "bg-muted text-foreground hover:bg-primary/10 hover:text-primary"
+                  }`}
+                >
+                  {campaign.show_on_homepage
+                    ? "Ana Sayfadan Kaldır"
+                    : "Ana Sayfada Göster"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => startEditCampaign(campaign)}
+                  className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                >
+                  Düzenle
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => archiveCampaign(campaign.id)}
+                  className="rounded-full px-3 py-1 text-xs font-medium bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
+                >
+                  Arşivle
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {!archived && editingCampaignId === campaign.id && (
+          <div className="mt-4 rounded-xl border border-border bg-background p-4 space-y-4">
+            <div className="grid md:grid-cols-3 gap-4">
+              {ruleCode === "weekday_discount" && (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Geçerli Gün
+                    </label>
+                    <select
+                      value={editForm.weekday}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          weekday: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Gün seçin</option>
+                      {weekdayOptions.map((day) => (
+                        <option key={day.value} value={day.value}>
+                          {day.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      İndirim Oranı (%)
+                    </label>
+                    <input
+                      type="number"
+                      value={editForm.discountPercent}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          discountPercent: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                </>
+              )}
+
+              {(ruleCode === "monthly_volume_gift" ||
+                ruleCode === "monthly_volume_reward") && (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Hedef Litre
+                    </label>
+                    <input
+                      type="number"
+                      value={editForm.targetVolume}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          targetVolume: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Hediye Litre
+                    </label>
+                    <input
+                      type="number"
+                      value={editForm.rewardValue}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          rewardValue: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Başlangıç Tarihi
+                </label>
+                <input
+                  type="date"
+                  value={editForm.startDate}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      startDate: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Bitiş Tarihi
+                </label>
+                <input
+                  type="date"
+                  value={editForm.endDate}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      endDate: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                />
+              </div>
+
+              <div className="space-y-1 md:col-span-2">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Ana Sayfa Metni
+                </label>
+                <input
+                  value={editForm.homepageText}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      homepageText: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={cancelEditCampaign}
+                className="rounded-full px-4 py-2 text-xs font-medium bg-muted text-foreground"
+              >
+                Vazgeç
+              </button>
+
+              <button
+                type="button"
+                onClick={() => saveCampaignEdit(campaign)}
+                className="rounded-full px-4 py-2 text-xs font-medium bg-primary text-primary-foreground"
+              >
+                Kaydet
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -865,8 +1149,7 @@ const archiveCampaign = async (id: string) => {
 
                     {(selectedCreateRule?.code === "monthly_volume_gift" ||
                       selectedCreateRule?.code === "monthly_volume_reward" ||
-                      selectedCreateRule?.code ===
-                        "monthly_volume_discount") && (
+                      selectedCreateRule?.code === "monthly_volume_discount") && (
                       <>
                         <div className="space-y-1">
                           <label className="text-xs font-medium text-muted-foreground">
@@ -887,8 +1170,7 @@ const archiveCampaign = async (id: string) => {
 
                         <div className="space-y-1">
                           <label className="text-xs font-medium text-muted-foreground">
-                            {selectedCreateRule?.code ===
-                            "monthly_volume_discount"
+                            {selectedCreateRule?.code === "monthly_volume_discount"
                               ? "İndirim Tutarı (TL)"
                               : "Hediye Litre"}
                           </label>
@@ -952,9 +1234,10 @@ const archiveCampaign = async (id: string) => {
                     <button
                       type="button"
                       onClick={createCampaign}
-                      className="rounded-full px-4 py-2 text-xs font-medium bg-primary text-primary-foreground"
+                      disabled={creatingCampaign}
+                      className="rounded-full px-4 py-2 text-xs font-medium bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Kaydet
+                      {creatingCampaign ? "Kaydediliyor..." : "Kaydet"}
                     </button>
                   </div>
                 </div>
@@ -966,391 +1249,35 @@ const archiveCampaign = async (id: string) => {
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {campaigns.map((campaign) => {
-                    const ruleCode = campaign.campaign_rule_types?.code;
-                    const weekdayCondition = getCondition(campaign, "weekday");
-                    const targetCondition = getCondition(
-                      campaign,
-                      "monthly_volume_gte"
-                    );
-                    const reward = getFirstReward(campaign);
-
-                    return (
-                      <div className="mt-6 border-t border-border pt-4">
-  <button
-    type="button"
-    onClick={() => setShowArchivedCampaigns((prev) => !prev)}
-    className="text-sm font-medium text-muted-foreground hover:text-foreground"
-  >
-    {showArchivedCampaigns
-      ? "Arşivlenen kampanyaları gizle"
-      : `Arşivlenen kampanyaları göster (${archivedCampaigns.length})`}
-  </button>
-
-  {showArchivedCampaigns && (
-    <div className="mt-4 space-y-3">
-      {archivedCampaigns.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Arşivlenen kampanya bulunmuyor.
-        </p>
-      ) : (
-        archivedCampaigns.map((campaign) => (
-          <div
-            key={campaign.id}
-            className="rounded-xl border border-border bg-muted/30 p-4"
-          >
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-              <div>
-                <h3 className="font-semibold text-muted-foreground">
-                  {campaign.title}
-                </h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {campaign.description || "Açıklama yok"}
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Tarih: {formatDate(campaign.start_date)} -{" "}
-                  {formatDate(campaign.end_date)}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => restoreCampaign(campaign.id)}
-                className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-              >
-                Arşivden Çıkar
-              </button>
-            </div>
-          </div>
-        ))
-      )}
-    </div>
-  )}
-</div>
-                      
-                      <div
-                        key={campaign.id}
-                        className="rounded-xl border border-border p-4"
-                      >
-                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-                          <div>
-                            <h3 className="font-semibold text-foreground">
-                              {campaign.title}
-                            </h3>
-
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {campaign.description || "Açıklama yok"}
-                            </p>
-
-                            <p className="text-xs text-muted-foreground mt-2">
-                              Kural:{" "}
-                              {campaign.campaign_rule_types?.name ||
-                                "Kural tipi bulunamadı"}
-                            </p>
-
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Tarih: {formatDate(campaign.start_date)} -{" "}
-                              {formatDate(campaign.end_date)}
-                            </p>
-
-                            {ruleCode === "weekday_discount" && (
-                              <>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Gün:{" "}
-                                  {weekdayOptions.find(
-                                    (day) =>
-                                      day.value ===
-                                      weekdayCondition?.condition_value
-                                  )?.label || "Tanımsız"}
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  İndirim: %{reward?.reward_value || 0}
-                                </p>
-                              </>
-                            )}
-
-                            {(ruleCode === "monthly_volume_gift" ||
-                              ruleCode === "monthly_volume_reward") && (
-                              <>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Hedef litre:{" "}
-                                  {targetCondition?.condition_value || "-"} L
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Hediye: {reward?.reward_value || 0}{" "}
-                                  {reward?.reward_unit || "L"}
-                                </p>
-                              </>
-                            )}
-
-                            {ruleCode === "monthly_volume_discount" && (
-                              <>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Hedef litre:{" "}
-                                  {targetCondition?.condition_value || "-"} L
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  İndirim: {reward?.reward_value || 0} TL
-                                </p>
-                              </>
-                            )}
-
-                            {campaign.homepage_text && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Ana sayfa metni: {campaign.homepage_text}
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="flex flex-wrap gap-2 md:justify-end">
-                            <span
-                              className={`rounded-full px-3 py-1 text-xs font-medium ${
-                                campaign.is_active
-                                  ? "bg-primary/10 text-primary"
-                                  : "bg-muted text-muted-foreground"
-                              }`}
-                            >
-                              {campaign.is_active ? "Aktif" : "Pasif"}
-                            </span>
-
-                            <span
-                              className={`rounded-full px-3 py-1 text-xs font-medium ${
-                                campaign.show_on_homepage
-                                  ? "bg-primary/10 text-primary"
-                                  : "bg-muted text-muted-foreground"
-                              }`}
-                            >
-                              {campaign.show_on_homepage
-                                ? "Ana sayfada"
-                                : "Ana sayfada değil"}
-                            </span>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                toggleCampaignActive(
-                                  campaign.id,
-                                  campaign.is_active
-                                )
-                              }
-                              className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-                            >
-                              {campaign.is_active ? "Pasif Yap" : "Aktif Yap"}
-                            </button>
-
-                            <button
-                              type="button"
-                              disabled={!campaign.is_active}
-                              onClick={() =>
-                                toggleCampaignHomepage(
-                                  campaign.id,
-                                  campaign.show_on_homepage
-                                )
-                              }
-                              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                                !campaign.is_active
-                                  ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
-                                  : "bg-muted text-foreground hover:bg-primary/10 hover:text-primary"
-                              }`}
-                            >
-                              {campaign.show_on_homepage
-                                ? "Ana Sayfadan Kaldır"
-                                : "Ana Sayfada Göster"}
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => startEditCampaign(campaign)}
-                              className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-                            >
-                              Düzenle
-                            </button>
-
-                            <button
-  type="button"
-  onClick={() => archiveCampaign(campaign.id)}
-  className="rounded-full px-3 py-1 text-xs font-medium bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
->
-  Arşivle
-</button>
-
-                            <button
-  type="button"
-  onClick={() => archiveCampaign(campaign.id)}
-  className="rounded-full px-3 py-1 text-xs font-medium bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
->
-  Arşivle
-</button>
-                          </div>
-                        </div>
-
-                        
-
-                        {editingCampaignId === campaign.id && (
-                          <div className="mt-4 rounded-xl border border-border bg-background p-4 space-y-4">
-                            <div className="grid md:grid-cols-3 gap-4">
-                              {ruleCode === "weekday_discount" && (
-                                <>
-                                  <div className="space-y-1">
-                                    <label className="text-xs font-medium text-muted-foreground">
-                                      Geçerli Gün
-                                    </label>
-                                    <select
-                                      value={editForm.weekday}
-                                      onChange={(e) =>
-                                        setEditForm((prev) => ({
-                                          ...prev,
-                                          weekday: e.target.value,
-                                        }))
-                                      }
-                                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                                    >
-                                      <option value="">Gün seçin</option>
-                                      {weekdayOptions.map((day) => (
-                                        <option
-                                          key={day.value}
-                                          value={day.value}
-                                        >
-                                          {day.label}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </div>
-
-                                  <div className="space-y-1">
-                                    <label className="text-xs font-medium text-muted-foreground">
-                                      İndirim Oranı (%)
-                                    </label>
-                                    <input
-                                      type="number"
-                                      value={editForm.discountPercent}
-                                      onChange={(e) =>
-                                        setEditForm((prev) => ({
-                                          ...prev,
-                                          discountPercent: e.target.value,
-                                        }))
-                                      }
-                                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                                    />
-                                  </div>
-                                </>
-                              )}
-
-                              {(ruleCode === "monthly_volume_gift" ||
-                                ruleCode === "monthly_volume_reward") && (
-                                <>
-                                  <div className="space-y-1">
-                                    <label className="text-xs font-medium text-muted-foreground">
-                                      Hedef Litre
-                                    </label>
-                                    <input
-                                      type="number"
-                                      value={editForm.targetVolume}
-                                      onChange={(e) =>
-                                        setEditForm((prev) => ({
-                                          ...prev,
-                                          targetVolume: e.target.value,
-                                        }))
-                                      }
-                                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                                    />
-                                  </div>
-
-                                  <div className="space-y-1">
-                                    <label className="text-xs font-medium text-muted-foreground">
-                                      Hediye Litre
-                                    </label>
-                                    <input
-                                      type="number"
-                                      value={editForm.rewardValue}
-                                      onChange={(e) =>
-                                        setEditForm((prev) => ({
-                                          ...prev,
-                                          rewardValue: e.target.value,
-                                        }))
-                                      }
-                                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                                    />
-                                  </div>
-                                </>
-                              )}
-
-                              <div className="space-y-1">
-                                <label className="text-xs font-medium text-muted-foreground">
-                                  Başlangıç Tarihi
-                                </label>
-                                <input
-                                  type="date"
-                                  value={editForm.startDate}
-                                  onChange={(e) =>
-                                    setEditForm((prev) => ({
-                                      ...prev,
-                                      startDate: e.target.value,
-                                    }))
-                                  }
-                                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                                />
-                              </div>
-
-                              <div className="space-y-1">
-                                <label className="text-xs font-medium text-muted-foreground">
-                                  Bitiş Tarihi
-                                </label>
-                                <input
-                                  type="date"
-                                  value={editForm.endDate}
-                                  onChange={(e) =>
-                                    setEditForm((prev) => ({
-                                      ...prev,
-                                      endDate: e.target.value,
-                                    }))
-                                  }
-                                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                                />
-                              </div>
-
-                              <div className="space-y-1 md:col-span-2">
-                                <label className="text-xs font-medium text-muted-foreground">
-                                  Ana Sayfa Metni
-                                </label>
-                                <input
-                                  value={editForm.homepageText}
-                                  onChange={(e) =>
-                                    setEditForm((prev) => ({
-                                      ...prev,
-                                      homepageText: e.target.value,
-                                    }))
-                                  }
-                                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="flex gap-2 justify-end">
-                              <button
-                                type="button"
-                                onClick={cancelEditCampaign}
-                                className="rounded-full px-4 py-2 text-xs font-medium bg-muted text-foreground"
-                              >
-                                Vazgeç
-                              </button>
-
-                              <button
-  type="button"
-  onClick={createCampaign}
-  disabled={creatingCampaign}
-  className="rounded-full px-4 py-2 text-xs font-medium bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
->
-  {creatingCampaign ? "Kaydediliyor..." : "Kaydet"}
-</button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {campaigns.map((campaign) => renderCampaignCard(campaign))}
                 </div>
               )}
+
+              <div className="mt-6 border-t border-border pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowArchivedCampaigns((prev) => !prev)}
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                >
+                  {showArchivedCampaigns
+                    ? "Arşivlenen kampanyaları gizle"
+                    : `Arşivlenen kampanyaları göster (${archivedCampaigns.length})`}
+                </button>
+
+                {showArchivedCampaigns && (
+                  <div className="mt-4 space-y-3">
+                    {archivedCampaigns.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        Arşivlenen kampanya bulunmuyor.
+                      </p>
+                    ) : (
+                      archivedCampaigns.map((campaign) =>
+                        renderCampaignCard(campaign, true)
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
             </section>
 
             <section className="rounded-2xl border border-border bg-card p-5 md:p-6">
