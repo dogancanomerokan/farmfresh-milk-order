@@ -460,8 +460,7 @@ const MemberPage = () => {
                   <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
                     Üye
                   </span>
-                  <span>•</span>
-                  <span>{authUser.email}</span>
+                  <span className="break-all">{authUser.email}</span>
                 </div>
                 {profile?.created_at && (
                   <p className="mt-4 text-sm text-muted-foreground">
