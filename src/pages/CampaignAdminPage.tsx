@@ -73,6 +73,8 @@ const emptyCreateForm = {
 
 const CampaignAdminPage = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [archivedCampaigns, setArchivedCampaigns] = useState<Campaign[]>([]);
+const [showArchivedCampaigns, setShowArchivedCampaigns] = useState(false);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [ruleTypes, setRuleTypes] = useState<RuleType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,7 +149,32 @@ const CampaignAdminPage = () => {
   )
   .eq("is_archived", false)
   .order("created_at", { ascending: false });
-      
+
+      const { data: archivedCampaignData, error: archivedCampaignError } =
+  await supabase
+    .from("campaigns")
+    .select(`
+      *,
+      campaign_rule_types (
+        name,
+        code
+      ),
+      campaign_conditions (
+        id,
+        condition_key,
+        condition_value
+      ),
+      campaign_rewards (
+        id,
+        reward_type,
+        reward_value,
+        reward_unit
+      )
+    `)
+    .eq("is_archived", true)
+    .order("created_at", { ascending: false });
+
+if (archivedCampaignError) throw archivedCampaignError;
       if (campaignError) throw campaignError;
 
       const { data: announcementData, error: announcementError } =
@@ -160,6 +187,7 @@ const CampaignAdminPage = () => {
 
       setRuleTypes((ruleTypeData || []) as RuleType[]);
       setCampaigns((campaignData || []) as Campaign[]);
+      setArchivedCampaigns((archivedCampaignData || []) as Campaign[]);
       setAnnouncements((announcementData || []) as Announcement[]);
     } catch (error: any) {
       console.error("Kampanya yönetimi verileri alınamadı:", error);
@@ -548,6 +576,50 @@ const CampaignAdminPage = () => {
     await loadData();
   };
 
+const archiveCampaign = async (id: string) => {
+  const confirmed = window.confirm(
+    "Bu kampanyayı arşivlemek istediğinize emin misiniz?"
+  );
+
+  if (!confirmed) return;
+
+  const { error } = await supabase
+    .from("campaigns")
+    .update({
+      is_archived: true,
+      is_active: false,
+      show_on_homepage: false,
+    })
+    .eq("id", id);
+
+  if (error) {
+    toast.error(error.message || "Kampanya arşivlenemedi");
+    return;
+  }
+
+  toast.success("Kampanya arşivlendi");
+  await loadData();
+};
+
+  const restoreCampaign = async (id: string) => {
+  const { error } = await supabase
+    .from("campaigns")
+    .update({
+      is_archived: false,
+      is_active: false,
+      show_on_homepage: false,
+    })
+    .eq("id", id);
+
+  if (error) {
+    toast.error(error.message || "Kampanya geri alınamadı");
+    return;
+  }
+
+  toast.success("Kampanya arşivden çıkarıldı");
+  await loadData();
+};
+  
   const archiveCampaign = async (id: string) => {
   const confirmed = window.confirm(
     "Bu kampanyayı arşivlemek istediğinize emin misiniz?"
@@ -904,6 +976,58 @@ const CampaignAdminPage = () => {
                     const reward = getFirstReward(campaign);
 
                     return (
+                      <div className="mt-6 border-t border-border pt-4">
+  <button
+    type="button"
+    onClick={() => setShowArchivedCampaigns((prev) => !prev)}
+    className="text-sm font-medium text-muted-foreground hover:text-foreground"
+  >
+    {showArchivedCampaigns
+      ? "Arşivlenen kampanyaları gizle"
+      : `Arşivlenen kampanyaları göster (${archivedCampaigns.length})`}
+  </button>
+
+  {showArchivedCampaigns && (
+    <div className="mt-4 space-y-3">
+      {archivedCampaigns.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Arşivlenen kampanya bulunmuyor.
+        </p>
+      ) : (
+        archivedCampaigns.map((campaign) => (
+          <div
+            key={campaign.id}
+            className="rounded-xl border border-border bg-muted/30 p-4"
+          >
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-muted-foreground">
+                  {campaign.title}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {campaign.description || "Açıklama yok"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Tarih: {formatDate(campaign.start_date)} -{" "}
+                  {formatDate(campaign.end_date)}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => restoreCampaign(campaign.id)}
+                className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+              >
+                Arşivden Çıkar
+              </button>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  )}
+</div>
+                      
                       <div
                         key={campaign.id}
                         className="rounded-xl border border-border p-4"
@@ -1041,6 +1165,14 @@ const CampaignAdminPage = () => {
                             >
                               Düzenle
                             </button>
+
+                            <button
+  type="button"
+  onClick={() => archiveCampaign(campaign.id)}
+  className="rounded-full px-3 py-1 text-xs font-medium bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
+>
+  Arşivle
+</button>
 
                             <button
   type="button"
