@@ -145,7 +145,9 @@ const CampaignAdminPage = () => {
           )
         `
         )
+        .eq("is_archived", false)
         .order("created_at", { ascending: false });
+      
 
       if (campaignError) throw campaignError;
 
@@ -547,6 +549,30 @@ const CampaignAdminPage = () => {
     await loadData();
   };
 
+  const archiveCampaign = async (id: string) => {
+  const confirmed = window.confirm(
+    "Bu kampanyayı arşivlemek istediğinize emin misiniz?"
+  );
+
+  if (!confirmed) return;
+
+  const { error } = await supabase
+    .from("campaigns")
+    .update({
+      is_archived: true,
+      is_active: false,
+      show_on_homepage: false,
+    })
+    .eq("id", id);
+
+  if (error) {
+    toast.error(error.message || "Kampanya arşivlenemedi");
+    return;
+  }
+
+  toast.success("Kampanya arşivlendi");
+  await loadData();
+};
   const toggleAnnouncementActive = async (id: string, currentValue: boolean) => {
     const nextActiveValue = !currentValue;
 
@@ -1016,8 +1042,18 @@ const CampaignAdminPage = () => {
                             >
                               Düzenle
                             </button>
+
+                            <button
+  type="button"
+  onClick={() => archiveCampaign(campaign.id)}
+  className="rounded-full px-3 py-1 text-xs font-medium bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
+>
+  Arşivle
+</button>
                           </div>
                         </div>
+
+                        
 
                         {editingCampaignId === campaign.id && (
                           <div className="mt-4 rounded-xl border border-border bg-background p-4 space-y-4">
