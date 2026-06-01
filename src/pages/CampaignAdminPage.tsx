@@ -604,6 +604,65 @@ const CampaignAdminPage = () => {
     await loadData();
   };
 
+const deleteArchivedCampaign = async (id: string) => {
+  const { data: canDelete, error: checkError } = await supabase.rpc(
+    "can_delete_campaign",
+    {
+      p_campaign_id: id,
+    }
+  );
+
+  if (checkError) {
+    toast.error(checkError.message || "Kampanya kullanımı kontrol edilemedi");
+    return;
+  }
+
+  if (!canDelete) {
+    toast.error("Bu kampanya müşteri tarafından kullanıldığı için silinemez.");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    "Bu kampanyayı kalıcı olarak silmek istediğinize emin misiniz?"
+  );
+
+  if (!confirmed) return;
+
+  const { error: conditionError } = await supabase
+    .from("campaign_conditions")
+    .delete()
+    .eq("campaign_id", id);
+
+  if (conditionError) {
+    toast.error(conditionError.message || "Kampanya koşulları silinemedi");
+    return;
+  }
+
+  const { error: rewardError } = await supabase
+    .from("campaign_rewards")
+    .delete()
+    .eq("campaign_id", id);
+
+  if (rewardError) {
+    toast.error(rewardError.message || "Kampanya ödülleri silinemedi");
+    return;
+  }
+
+  const { error: campaignError } = await supabase
+    .from("campaigns")
+    .delete()
+    .eq("id", id);
+
+  if (campaignError) {
+    toast.error(campaignError.message || "Kampanya silinemedi");
+    return;
+  }
+
+  toast.success("Kampanya kalıcı olarak silindi");
+  await loadData();
+};
+
+  
   const toggleAnnouncementActive = async (id: string, currentValue: boolean) => {
     const nextActiveValue = !currentValue;
 
@@ -732,15 +791,25 @@ const CampaignAdminPage = () => {
           </div>
 
           <div className="flex flex-wrap gap-2 md:justify-end">
-            {archived ? (
-              <button
-                type="button"
-                onClick={() => restoreCampaign(campaign.id)}
-                className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-              >
-                Arşivden Çıkar
-              </button>
-            ) : (
+           {archived ? (
+  <>
+    <button
+      type="button"
+      onClick={() => restoreCampaign(campaign.id)}
+      className="rounded-full px-3 py-1 text-xs font-medium bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+    >
+      Arşivden Çıkar
+    </button>
+
+    <button
+      type="button"
+      onClick={() => deleteArchivedCampaign(campaign.id)}
+      className="rounded-full px-3 py-1 text-xs font-medium bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
+    >
+      Kalıcı Sil
+    </button>
+  </>
+) : (
               <>
                 <span
                   className={`rounded-full px-3 py-1 text-xs font-medium ${
