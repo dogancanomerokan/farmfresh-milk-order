@@ -630,7 +630,7 @@ const MemberPage = () => {
   <div className="absolute left-3 right-3 top-3 h-2 rounded-full bg-primary/10" />
   <div className="absolute inset-x-4 bottom-4 h-16 rounded-full bg-white/60 blur-sm" />
   <img
-  src="/Icons/Icons-2.png"
+  src="/icons/milk-glass-transparent.png"
   alt="Süt Bardağı"
   className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-md"
  />
@@ -735,7 +735,7 @@ const MemberPage = () => {
               <div className="mx-auto mt-6 flex h-56 w-56 items-center justify-center rounded-full border-4 border-primary bg-primary/5">
                 <div className="text-center">
                 <img
-  src="/Icons/Icons-1.png"
+  src="/icons/cow-head-transparent.png"
   alt="Üyelik Segmenti"
   className="mx-auto mb-3 h-20 w-20 object-contain"
 />
