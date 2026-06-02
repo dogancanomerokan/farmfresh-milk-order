@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";"
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   User,
