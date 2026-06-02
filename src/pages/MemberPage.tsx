@@ -735,7 +735,7 @@ const MemberPage = () => {
               <div className="mx-auto mt-6 flex h-56 w-56 items-center justify-center rounded-full border-4 border-primary bg-primary/5">
                 <div className="text-center">
                 <img
-  src="/icons/cow-head.png"
+  src="/icons/Icons-1.png"
   alt="Üyelik Segmenti"
   className="mx-auto mb-3 h-20 w-20 object-contain"
 />
