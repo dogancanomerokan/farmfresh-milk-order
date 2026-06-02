@@ -192,6 +192,69 @@ const CampaignAdminPage = () => {
     setShowCreateForm(false);
   };
 
+  const monthlyLoyaltyRuleCodes = [
+  "monthly_volume_gift",
+  "monthly_volume_reward",
+  "monthly_volume_discount",
+];
+
+const checkMonthlyLoyaltyConflict = async (
+  ruleCode: string,
+  startDate: string,
+  endDate: string,
+  excludeCampaignId?: string
+) => {
+  if (!monthlyLoyaltyRuleCodes.includes(ruleCode)) {
+    return false;
+  }
+
+  let query = supabase
+    .from("campaigns")
+    .select(`
+      id,
+      title,
+      start_date,
+      end_date,
+      is_active,
+      campaign_rule_types!inner (
+        code
+      )
+    `)
+    .eq("is_archived", false)
+    .in("campaign_rule_types.code", monthlyLoyaltyRuleCodes)
+    .lte("start_date", endDate)
+    .gte("end_date", startDate);
+
+  if (excludeCampaignId) {
+    query = query.neq("id", excludeCampaignId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+
+  const conflictingCampaigns = data || [];
+
+  if (conflictingCampaigns.length === 0) {
+    return false;
+  }
+
+  const conflictIds = conflictingCampaigns.map((campaign) => campaign.id);
+
+  const { count, error: usageError } = await supabase
+    .from("customer_rewards")
+    .select("id", { count: "exact", head: true })
+    .in("campaign_id", conflictIds);
+
+  if (usageError) throw usageError;
+
+  const hasUsedCampaign = (count || 0) > 0;
+  const hasActiveCampaign = conflictingCampaigns.some(
+    (campaign) => campaign.is_active
+  );
+
+  return hasActiveCampaign || hasUsedCampaign;
+};
   const createCampaign = async () => {
     if (creatingCampaign) return;
 
