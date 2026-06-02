@@ -939,7 +939,7 @@ const vipArcProgressLength = arcLength * (vipArcProgressPercent / 100);
     </p>
 
     <p className="text-sm text-muted-foreground">
-      {vipRanges[currentVipLevel]}
+      {vipRanges[currentVipLevel as keyof typeof vipRanges]}
     </p>
   </div>
 </div>
