@@ -356,6 +356,10 @@ setActiveVipLevel(activeVipData || null);
       (condition) => condition.condition_key === "monthly_volume_gte"
     )?.condition_value || 0
   );
+  
+  const hasActiveLoyaltyCampaign =
+  !!loyaltyCampaign &&
+  loyaltyTarget > 0;
 
   const loyaltyReward = loyaltyCampaign?.campaign_rewards?.[0];
   const loyaltyRewardValue = Number(loyaltyReward?.reward_value || 0);
