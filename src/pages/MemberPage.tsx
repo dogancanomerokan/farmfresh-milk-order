@@ -92,6 +92,17 @@ type CustomerReward = {
   expires_at: string | null;
 };
 
+type ActiveVipLevel = {
+  id: string;
+  user_id: string;
+  source_year: number;
+  source_month: number;
+  active_year: number;
+  active_month: number;
+  vip_level: string;
+  total_liters: number;
+};
+
 type LoyaltyCampaign = {
   id: string;
   title: string;
@@ -130,6 +141,8 @@ const MemberPage = () => {
   const [customerRewards, setCustomerRewards] = useState<CustomerReward[]>([]);
   const [loyaltyCampaign, setLoyaltyCampaign] =
     useState<LoyaltyCampaign | null>(null);
+  const [activeVipLevel, setActiveVipLevel] =
+  useState<ActiveVipLevel | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -220,6 +233,20 @@ const MemberPage = () => {
       const now = new Date();
       const today = now.toISOString().slice(0, 10);
 
+      const { data: activeVipData, error: activeVipError } = await supabase
+  .from("customer_active_vip_levels")
+  .select("*")
+  .eq("user_id", user.id)
+  .eq("active_year", now.getFullYear())
+  .eq("active_month", now.getMonth() + 1)
+  .maybeSingle();
+
+if (activeVipError) {
+  console.error("Aktif VIP seviyesi alınamadı:", activeVipError.message);
+}
+
+setActiveVipLevel(activeVipData || null);
+      
       const { data: progressData } = await supabase
         .from("customer_monthly_progress")
         .select("*")
