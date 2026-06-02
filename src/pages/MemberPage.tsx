@@ -13,7 +13,6 @@ import {
   Save,
   X,
   Gift,
-  Trophy,
   ChevronRight,
   Clock,
 } from "lucide-react";
@@ -882,8 +881,7 @@ const nextVipProgressPercent = nextVip
 
             <div className="rounded-2xl border border-border bg-background p-5">
               <h3 className="font-bold text-foreground">Üyelik Segmentiniz</h3>
-              <p className="text-sm text-muted-foreground">Sadakat seviyeniz</p>
-
+             
               <div className="mx-auto mt-6 flex h-56 w-56 items-center justify-center rounded-full border-4 border-primary bg-primary/5">
                 <div className="text-center">
                   <img
