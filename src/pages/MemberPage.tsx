@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";"
 import { Label } from "@/components/ui/label";
 import {
   User,
@@ -735,7 +735,7 @@ const MemberPage = () => {
               <div className="mx-auto mt-6 flex h-56 w-56 items-center justify-center rounded-full border-4 border-primary bg-primary/5">
                 <div className="text-center">
                 <img
-  src="/Icons/Icons-1.png"
+  src="/Icons/Icons-2.png"
   alt="Üyelik Segmenti"
   className="mx-auto mb-3 h-20 w-20 object-contain"
 />
