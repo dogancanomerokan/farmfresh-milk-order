@@ -280,6 +280,19 @@ const checkMonthlyLoyaltyConflict = async (
         return;
       }
 
+      const hasMonthlyConflict = await checkMonthlyLoyaltyConflict(
+  selectedRule.code,
+  createForm.startDate,
+  createForm.endDate
+);
+
+if (hasMonthlyConflict) {
+  toast.error(
+    "Bu tarih aralığında aktif veya kullanılmış başka bir aylık sadakat kampanyası var. Önce mevcut kampanya bitmeli ya da kullanılmamışsa pasif/arşiv yapılmalıdır."
+  );
+  return;
+}
+
       if (selectedRule.code === "weekday_discount") {
         if (!createForm.weekday) {
           toast.error("Geçerli gün seçilmelidir");
