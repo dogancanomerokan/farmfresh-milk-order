@@ -593,6 +593,26 @@ if (hasMonthlyConflict) {
   const toggleCampaignActive = async (id: string, currentValue: boolean) => {
     const nextActiveValue = !currentValue;
 
+    if (nextActiveValue) {
+  const campaign = campaigns.find((item) => item.id === id);
+
+  if (campaign?.campaign_rule_types?.code) {
+    const hasMonthlyConflict = await checkMonthlyLoyaltyConflict(
+      campaign.campaign_rule_types.code,
+      campaign.start_date || "",
+      campaign.end_date || "",
+      campaign.id
+    );
+
+    if (hasMonthlyConflict) {
+      toast.error(
+        "Bu tarih aralığında başka bir aylık sadakat kampanyası aktif veya kullanılmış durumda. Bu kampanya aktif edilemez."
+      );
+      return;
+    }
+  }
+}
+    
     const updatePayload: {
       is_active: boolean;
       show_on_homepage?: boolean;
