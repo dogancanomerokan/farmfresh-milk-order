@@ -892,31 +892,47 @@ const nextVipProgressPercent = nextVip
                     className="mx-auto mb-3 h-20 w-20 object-contain"
                   />
                   <p className="text-2xl font-bold text-primary">
-                    {monthlyProgress?.vip_level || "Standart"}
+                    {currentVipLevel}
                   </p>
-                  <p className="text-sm text-muted-foreground">0 - 99 L / Ay</p>
+                  <p className="text-sm text-muted-foreground">{vipRanges[currentVipLevel]}</p>
                 </div>
               </div>
 
               <div className="mt-6 rounded-xl bg-muted/40 p-4">
-                <p className="font-semibold text-foreground">
-                  Sonraki seviye: Silver
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Bu ay 50 L kazanarak Silver seviyesine yükselebilirsiniz.
-                </p>
+  {nextVip ? (
+    <>
+      <p className="font-semibold text-foreground">
+        Sonraki seviye: {nextVip.next}
+      </p>
 
-                <div className="mt-4 h-2 rounded-full bg-muted">
-                  <div
-                    className="h-2 rounded-full bg-primary"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Bu ay {nextVip.target} L seviyesine ulaşarak gelecek ay{" "}
+        {nextVip.next} seviyesine yükselebilirsiniz.
+      </p>
 
-                <p className="mt-2 text-right text-sm text-muted-foreground">
-                  {currentLiters} / {hasActiveLoyaltyCampaign ? loyaltyTarget : 50} L
-                </p>
-              </div>
+      <div className="mt-4 h-2 rounded-full bg-muted">
+        <div
+          className="h-2 rounded-full bg-primary"
+          style={{ width: `${nextVipProgressPercent}%` }}
+        />
+      </div>
+
+      <p className="mt-2 text-right text-sm text-muted-foreground">
+        {currentLiters} / {nextVip.target} L
+      </p>
+    </>
+  ) : (
+    <>
+      <p className="font-semibold text-foreground">
+        En yüksek seviyedesiniz 🎉
+      </p>
+
+      <p className="mt-1 text-sm text-muted-foreground">
+        Bu ay Platinum avantajlarından yararlanabilirsiniz.
+      </p>
+    </>
+  )}
+</div>
             </div>
           </div>
         </div>
