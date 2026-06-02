@@ -620,22 +620,24 @@ const MemberPage = () => {
   </svg>
 
   <div className="relative z-10 flex flex-col items-center justify-center">
-    <img
-      src="/icons/milk-glass-transparent.png"
-      alt="Süt Bardağı"
-      className="h-24 w-auto object-contain drop-shadow-md"
-    />
+  <img
+    src="/icons/milk-glass-transparent.png"
+    alt="Süt Bardağı"
+    className="h-24 w-auto object-contain drop-shadow-md"
+  />
 
-    <p className="mt-3 text-4xl font-bold text-primary">
-      {currentLiters} L
-    </p>
+  <p className="mt-3 text-4xl font-bold text-primary">
+    {currentLiters} L
+  </p>
 
-    <p className="text-sm text-muted-foreground">kazanılan</p>
+  <p className="text-sm text-muted-foreground">
+    kazanılan
+  </p>
 
-    <span className="mt-2 rounded-full bg-primary/10 px-4 py-1 text-sm font-semibold text-primary">
-      %{Math.round(progressPercent)}
-    </span>
-  </div>
+  <span className="mt-2 rounded-full bg-primary/10 px-4 py-1 text-sm font-semibold text-primary">
+    %{Math.round(progressPercent)}
+  </span>
+</div>
 
   <span className="absolute bottom-4 left-6 text-xs text-muted-foreground">
     0 L
