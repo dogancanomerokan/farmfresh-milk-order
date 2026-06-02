@@ -361,11 +361,6 @@ setActiveVipLevel(activeVipData || null);
   const loyaltyRewardValue = Number(loyaltyReward?.reward_value || 0);
   const loyaltyRewardUnit = loyaltyReward?.reward_unit || "L";
 
- 
-const remainingLiters = hasActiveLoyaltyCampaign
-  ? Math.max(loyaltyTarget - currentLiters, 0)
-  : 0;
-  
   const currentLiters = Number(monthlyProgress?.total_liters || 0);
 
   const progressPercent = hasActiveLoyaltyCampaign
