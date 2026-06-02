@@ -552,9 +552,21 @@ if (targetOrder.user_id && targetOrder.delivery_date) {
     if (!confirmed) return;
 
     try {
+      const targetOrder = orders.find((o) => o.id === id);
+      
       const { error } = await supabase.from("orders").delete().eq("id", id);
 
       if (error) throw error;
+
+        if (targetOrder?.user_id && targetOrder.delivery_date) {
+    const deliveryDate = new Date(targetOrder.delivery_date);
+
+    await supabase.rpc("recalculate_customer_monthly_progress", {
+      p_user_id: targetOrder.user_id,
+      p_year: deliveryDate.getFullYear(),
+      p_month: deliveryDate.getMonth() + 1,
+    });
+  }
 
       setOrders((prev) => prev.filter((o) => o.id !== id));
       toast.success("Sipariş silindi");
