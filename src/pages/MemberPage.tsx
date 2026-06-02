@@ -368,6 +368,27 @@ setActiveVipLevel(activeVipData || null);
 
   const currentLiters = Number(monthlyProgress?.total_liters || 0);
 
+  const currentVipLevel = activeVipLevel?.vip_level || "Standart";
+
+const vipRanges: Record<string, string> = {
+  Standart: "0 - 99 L / Ay",
+  Silver: "100 - 249 L / Ay",
+  Gold: "250 - 499 L / Ay",
+  Platinum: "500+ L / Ay",
+};
+
+const vipNextTargets: Record<string, { next: string; target: number } | null> = {
+  Standart: { next: "Silver", target: 100 },
+  Silver: { next: "Gold", target: 250 },
+  Gold: { next: "Platinum", target: 500 },
+  Platinum: null,
+};
+
+const nextVip = vipNextTargets[currentVipLevel];
+const nextVipProgressPercent = nextVip
+  ? Math.min((currentLiters / nextVip.target) * 100, 100)
+  : 100;
+  
   const progressPercent = hasActiveLoyaltyCampaign
     ? Math.min((currentLiters / loyaltyTarget) * 100, 100)
     : 0;
