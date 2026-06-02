@@ -683,7 +683,7 @@ const MemberPage = () => {
               <div className="mt-5 rounded-xl bg-primary/5 p-4 text-sm">
                 <p className="text-muted-foreground">
                   {remainingLiters > 0
-                    ? `Bu ay ${remainingLiters} L daha kazanarak`
+                    ? `Bu ay ${remainingLiters} L daha alım yaparak`
                     : "Tebrikler! Harika gidiyorsunuz."}
                 </p>
                 <p className="font-semibold text-primary">
