@@ -639,6 +639,34 @@ const MemberPage = () => {
   </span>
 </div>
 
+  {/* Progress milestone bardakları */}
+<img
+  src="/icons/milk-glass-transparent.png"
+  alt=""
+  aria-hidden="true"
+  className="absolute left-[14%] top-[45%] h-7 w-auto object-contain opacity-80"
+/>
+
+<img
+  src="/icons/milk-glass-transparent.png"
+  alt=""
+  aria-hidden="true"
+  className="absolute left-1/2 top-[8%] h-7 w-auto -translate-x-1/2 object-contain opacity-80"
+/>
+
+<img
+  src="/icons/milk-glass-transparent.png"
+  alt=""
+  aria-hidden="true"
+  className="absolute right-[14%] top-[45%] h-7 w-auto object-contain opacity-80"
+/>
+
+<img
+  src="/icons/milk-glass-transparent.png"
+  alt=""
+  aria-hidden="true"
+  className="absolute right-[22%] bottom-[15%] h-7 w-auto object-contain opacity-80"
+/>
   <span className="absolute bottom-4 left-6 text-xs text-muted-foreground">
     0 L
   </span>
