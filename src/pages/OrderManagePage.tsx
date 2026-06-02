@@ -405,12 +405,21 @@ if (adminIds.length > 0) {
       }
 
       const { error } = await supabase
-        .from("orders")
-        .update(updatePayload)
-        .eq("id", id);
+  .from("orders")
+  .update(updatePayload)
+  .eq("id", id);
 
-      if (error) throw error;
+if (error) throw error;
 
+if (targetOrder.user_id && targetOrder.delivery_date) {
+  const deliveryDate = new Date(targetOrder.delivery_date);
+
+  await supabase.rpc("recalculate_customer_monthly_progress", {
+    p_user_id: targetOrder.user_id,
+    p_year: deliveryDate.getFullYear(),
+    p_month: deliveryDate.getMonth() + 1,
+  });
+}
       setOrders((prev) =>
         prev.map((o) =>
           o.id === id
