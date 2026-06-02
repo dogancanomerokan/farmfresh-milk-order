@@ -387,6 +387,22 @@ const nextVip = vipNextTargets[currentVipLevel];
 const nextVipProgressPercent = nextVip
   ? Math.min((currentLiters / nextVip.target) * 100, 100)
   : 100;
+
+  const nextMonthName = format(
+  new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+  "MMMM",
+  { locale: tr }
+);
+
+const hasReachedNextVip = nextVip
+  ? currentLiters >= nextVip.target
+  : false;
+
+const vipArcProgressPercent = nextVip
+  ? nextVipProgressPercent
+  : 100;
+
+const vipArcProgressLength = arcLength * (vipArcProgressPercent / 100);
   
   const progressPercent = hasActiveLoyaltyCampaign
     ? Math.min((currentLiters / loyaltyTarget) * 100, 100)
