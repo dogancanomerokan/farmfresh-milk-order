@@ -898,19 +898,51 @@ const vipArcProgressLength = arcLength * (vipArcProgressPercent / 100);
             <div className="rounded-2xl border border-border bg-background p-5">
               <h3 className="font-bold text-foreground">Üyelik Segmentiniz</h3>
              
-              <div className="mx-auto mt-6 flex h-56 w-56 items-center justify-center rounded-full border-4 border-primary bg-primary/5">
-                <div className="text-center">
-                  <img
-                    src="/icons/cow-head-transparent.png"
-                    alt="Üyelik Segmenti"
-                    className="mx-auto mb-3 h-20 w-20 object-contain"
-                  />
-                  <p className="text-2xl font-bold text-primary">
-                    {currentVipLevel}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{vipRanges[currentVipLevel]}</p>
-                </div>
-              </div>
+             <div className="relative mx-auto mt-6 flex h-56 w-56 items-center justify-center">
+  <svg className="absolute inset-0 h-full w-full">
+    <circle
+      cx="50%"
+      cy="50%"
+      r="82"
+      fill="none"
+      stroke="hsl(var(--muted))"
+      strokeWidth="8"
+      strokeLinecap="round"
+      strokeDasharray={`${2 * Math.PI * 82 * 0.78} ${2 * Math.PI * 82}`}
+      strokeDashoffset="0"
+      transform="rotate(130 112 112)"
+    />
+
+    <circle
+      cx="50%"
+      cy="50%"
+      r="82"
+      fill="none"
+      stroke="hsl(var(--primary))"
+      strokeWidth="8"
+      strokeLinecap="round"
+      strokeDasharray={`${2 * Math.PI * 82 * 0.78 * (vipArcProgressPercent / 100)} ${2 * Math.PI * 82}`}
+      strokeDashoffset="0"
+      transform="rotate(130 112 112)"
+    />
+  </svg>
+
+  <div className="relative z-10 text-center">
+    <img
+      src="/icons/cow-head-transparent.png"
+      alt="Üyelik Segmenti"
+      className="mx-auto mb-3 h-20 w-20 object-contain"
+    />
+
+    <p className="text-2xl font-bold text-primary">
+      {currentVipLevel}
+    </p>
+
+    <p className="text-sm text-muted-foreground">
+      {vipRanges[currentVipLevel]}
+    </p>
+  </div>
+</div>
 
               <div className="mt-6 rounded-xl bg-muted/40 p-4">
   {nextVip ? (
