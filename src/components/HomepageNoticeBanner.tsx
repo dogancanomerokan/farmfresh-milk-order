@@ -34,14 +34,19 @@ const HomepageNoticeBanner = () => {
         console.error("Duyuru banner hatası:", announcementError);
       }
 
-      const { data: campaignData, error: campaignError } = await supabase
-        .from("campaigns")
-        .select("id, title, homepage_text")
-        .eq("is_active", true)
-        .eq("show_on_homepage", true)
-        .order("created_at", { ascending: false })
-        .limit(3);
+     const today = new Date().toISOString().split("T")[0];
 
+const { data: campaignData, error: campaignError } = await supabase
+  .from("campaigns")
+  .select("id, title, homepage_text")
+  .eq("is_active", true)
+  .eq("show_on_homepage", true)
+  .eq("is_archived", false)
+  .lte("start_date", today)
+  .gte("end_date", today)
+  .order("created_at", { ascending: false })
+  .limit(3);
+   
       if (campaignError) {
         console.error("Kampanya banner hatası:", campaignError);
       }
