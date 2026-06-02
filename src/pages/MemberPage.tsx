@@ -596,64 +596,59 @@ const MemberPage = () => {
                 Bu ayki kazanımınız
               </p>
 
-              <div className="relative mx-auto mt-5 flex h-72 w-72 max-w-full items-center justify-center">
-                <svg className="absolute inset-0 h-full w-full -rotate-90">
-                  <circle
-                    cx="50%"
-                    cy="50%"
-                    r="112"
-                    fill="none"
-                    stroke="hsl(var(--muted))"
-                    strokeWidth="10"
-                  />
-                  <circle
-                    cx="50%"
-                    cy="50%"
-                    r="112"
-                    fill="none"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth="10"
-                    strokeLinecap="round"
-                    strokeDasharray={2 * Math.PI * 112}
-                    strokeDashoffset={
-                      2 * Math.PI * 112 * (1 - progressPercent / 100)
-                    }
-                  />
-                </svg>
+<div className="relative mx-auto mt-5 flex h-72 w-72 max-w-full items-center justify-center">
+  <svg className="absolute inset-0 h-full w-full -rotate-90">
+    <circle
+      cx="50%"
+      cy="50%"
+      r="112"
+      fill="none"
+      stroke="hsl(var(--muted))"
+      strokeWidth="10"
+    />
+    <circle
+      cx="50%"
+      cy="50%"
+      r="112"
+      fill="none"
+      stroke="hsl(var(--primary))"
+      strokeWidth="10"
+      strokeLinecap="round"
+      strokeDasharray={2 * Math.PI * 112}
+      strokeDashoffset={2 * Math.PI * 112 * (1 - progressPercent / 100)}
+    />
+  </svg>
 
-                <div className="relative flex flex-col items-center">
-                
-  <div
-    className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-primary/25 to-primary/5 transition-all duration-700"
-    style={{ height: `${progressPercent}%` }}
-  />
-  <div className="absolute left-3 right-3 top-3 h-2 rounded-full bg-primary/10" />
-  <div className="absolute inset-x-4 bottom-4 h-16 rounded-full bg-white/60 blur-sm" />
-  <img
-  src="/icons/milk-glass-transparent.png"
-  alt="Süt Bardağı"
-  className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-md"
- />
+  <div className="relative z-10 flex flex-col items-center justify-center">
+    <img
+      src="/icons/milk-glass-transparent.png"
+      alt="Süt Bardağı"
+      className="h-24 w-auto object-contain drop-shadow-md"
+    />
 
-                  <p className="mt-4 text-4xl font-bold text-primary">
-                    {currentLiters} L
-                  </p>
-                  <p className="text-sm text-muted-foreground">kazanılan</p>
-                  <span className="mt-2 rounded-full bg-primary/10 px-4 py-1 text-sm font-semibold text-primary">
-                    %{Math.round(progressPercent)}
-                  </span>
-                </div>
+    <p className="mt-3 text-4xl font-bold text-primary">
+      {currentLiters} L
+    </p>
 
-                <span className="absolute bottom-4 left-6 text-xs text-muted-foreground">
-                  0 L
-                </span>
-                <span className="absolute top-4 left-1/2 -translate-x-1/2 text-xs text-muted-foreground">
-                  25 L
-                </span>
-                <span className="absolute bottom-4 right-6 text-xs text-muted-foreground">
-                  50 L
-                </span>
-              </div>
+    <p className="text-sm text-muted-foreground">kazanılan</p>
+
+    <span className="mt-2 rounded-full bg-primary/10 px-4 py-1 text-sm font-semibold text-primary">
+      %{Math.round(progressPercent)}
+    </span>
+  </div>
+
+  <span className="absolute bottom-4 left-6 text-xs text-muted-foreground">
+    0 L
+  </span>
+
+  <span className="absolute top-4 left-1/2 -translate-x-1/2 text-xs text-muted-foreground">
+    25 L
+  </span>
+
+  <span className="absolute bottom-4 right-6 text-xs text-muted-foreground">
+    50 L
+  </span>
+</div>
 
               <div className="mt-5 rounded-xl bg-primary/5 p-4 text-sm">
                 <p className="text-muted-foreground">
