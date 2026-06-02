@@ -383,6 +383,12 @@ const vipNextTargets: Record<string, { next: string; target: number } | null> = 
   Platinum: null,
 };
 
+   const circleRadius = 102;
+  const circleCircumference = 2 * Math.PI * circleRadius;
+  const arcRatio = 0.78;
+  const arcLength = circleCircumference * arcRatio;
+  const arcProgressLength = arcLength * (progressPercent / 100);
+  
 const nextVip = vipNextTargets[currentVipLevel];
 const nextVipProgressPercent = nextVip
   ? Math.min((currentLiters / nextVip.target) * 100, 100)
@@ -412,13 +418,7 @@ const vipArcProgressLength = arcLength * (vipArcProgressPercent / 100);
     ? Math.max(loyaltyTarget - currentLiters, 0)
     : 0;
 
-  const circleRadius = 102;
-  const circleCircumference = 2 * Math.PI * circleRadius;
-  const arcRatio = 0.78;
-  const arcLength = circleCircumference * arcRatio;
-  const arcProgressLength = arcLength * (progressPercent / 100);
-
-  const startEdit = () => {
+   const startEdit = () => {
     setFormData({
       name: profile?.full_name || "",
       phone: profile?.phone || "",
