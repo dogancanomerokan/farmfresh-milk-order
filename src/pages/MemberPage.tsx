@@ -14,8 +14,6 @@ import {
   X,
   Gift,
   Trophy,
-  Milk,
-  Cow,
   ChevronRight,
   Clock,
 } from "lucide-react";
@@ -94,6 +92,27 @@ type CustomerReward = {
   expires_at: string | null;
 };
 
+type LoyaltyCampaign = {
+  id: string;
+  title: string;
+  description: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  campaign_rule_types?: {
+    code: string;
+    name: string;
+  } | null;
+  campaign_conditions?: {
+    condition_key: string;
+    condition_value: string;
+  }[];
+  campaign_rewards?: {
+    reward_type: string;
+    reward_value: number;
+    reward_unit: string | null;
+  }[];
+};
+
 const MemberPage = () => {
   const navigate = useNavigate();
 
@@ -109,6 +128,8 @@ const MemberPage = () => {
   const [monthlyProgress, setMonthlyProgress] =
     useState<MonthlyProgress | null>(null);
   const [customerRewards, setCustomerRewards] = useState<CustomerReward[]>([]);
+  const [loyaltyCampaign, setLoyaltyCampaign] =
+    useState<LoyaltyCampaign | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -197,6 +218,7 @@ const MemberPage = () => {
       setOrders(mergedOrders);
 
       const now = new Date();
+      const today = now.toISOString().slice(0, 10);
 
       const { data: progressData } = await supabase
         .from("customer_monthly_progress")
@@ -215,6 +237,50 @@ const MemberPage = () => {
         .order("earned_at", { ascending: false });
 
       setCustomerRewards(rewardData || []);
+
+      const { data: loyaltyCampaignData, error: loyaltyCampaignError } =
+        await supabase
+          .from("campaigns")
+          .select(`
+            id,
+            title,
+            description,
+            start_date,
+            end_date,
+            campaign_rule_types!inner (
+              code,
+              name
+            ),
+            campaign_conditions (
+              condition_key,
+              condition_value
+            ),
+            campaign_rewards (
+              reward_type,
+              reward_value,
+              reward_unit
+            )
+          `)
+          .eq("is_active", true)
+          .eq("is_archived", false)
+          .lte("start_date", today)
+          .gte("end_date", today)
+          .in("campaign_rule_types.code", [
+            "monthly_volume_gift",
+            "monthly_volume_reward",
+          ])
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+      if (loyaltyCampaignError) {
+        console.error(
+          "Aktif sadakat kampanyası alınamadı:",
+          loyaltyCampaignError.message
+        );
+      }
+
+      setLoyaltyCampaign((loyaltyCampaignData || null) as LoyaltyCampaign | null);
     } catch (error: any) {
       console.error("Member page load error:", error);
     } finally {
@@ -259,10 +325,35 @@ const MemberPage = () => {
       ? completedOrders
       : cancelledOrders;
 
-  const loyaltyTarget = 50;
+  const loyaltyTarget = Number(
+    loyaltyCampaign?.campaign_conditions?.find(
+      (condition) => condition.condition_key === "monthly_volume_gte"
+    )?.condition_value || 0
+  );
+
+  const loyaltyReward = loyaltyCampaign?.campaign_rewards?.[0];
+  const loyaltyRewardValue = Number(loyaltyReward?.reward_value || 0);
+  const loyaltyRewardUnit = loyaltyReward?.reward_unit || "L";
+
+  const hasActiveLoyaltyCampaign = Boolean(
+    loyaltyCampaign && loyaltyTarget > 0 && loyaltyRewardValue > 0
+  );
+
   const currentLiters = Number(monthlyProgress?.total_liters || 0);
-  const progressPercent = Math.min((currentLiters / loyaltyTarget) * 100, 100);
-  const remainingLiters = Math.max(loyaltyTarget - currentLiters, 0);
+
+  const progressPercent = hasActiveLoyaltyCampaign
+    ? Math.min((currentLiters / loyaltyTarget) * 100, 100)
+    : 0;
+
+  const remainingLiters = hasActiveLoyaltyCampaign
+    ? Math.max(loyaltyTarget - currentLiters, 0)
+    : 0;
+
+  const circleRadius = 102;
+  const circleCircumference = 2 * Math.PI * circleRadius;
+  const arcRatio = 0.78;
+  const arcLength = circleCircumference * arcRatio;
+  const arcProgressLength = arcLength * (progressPercent / 100);
 
   const startEdit = () => {
     setFormData({
@@ -336,7 +427,7 @@ const MemberPage = () => {
 
   const renderRewardTitle = (reward: CustomerReward) => {
     if (reward.reward_type === "free_liter") {
-      return `${reward.reward_value}L Hediye Süt`;
+      return `${reward.reward_value}${loyaltyRewardUnit} Hediye Süt`;
     }
 
     return `${reward.reward_value} TL İndirim`;
@@ -393,13 +484,13 @@ const MemberPage = () => {
         </div>
 
         <Button
-  variant="outline"
-  size="sm"
-  className="self-center rounded-full"
-  onClick={() => navigate(`/member/orders/${order.id}`)}
->
-  Siparişi Görüntüle <ChevronRight className="ml-1 h-4 w-4" />
-</Button>
+          variant="outline"
+          size="sm"
+          className="self-center rounded-full"
+          onClick={() => navigate(`/member/orders/${order.id}`)}
+        >
+          Siparişi Görüntüle <ChevronRight className="ml-1 h-4 w-4" />
+        </Button>
       </div>
     );
   };
@@ -588,109 +679,95 @@ const MemberPage = () => {
           </div>
 
           <div className="grid gap-5 lg:grid-cols-3">
-            <div className="rounded-2xl border border-border bg-background p-5">
+            <div
+              className={`rounded-2xl border border-border bg-background p-5 ${
+                !hasActiveLoyaltyCampaign ? "opacity-70" : ""
+              }`}
+            >
               <h3 className="font-bold text-foreground">
                 Aylık Sadakat İlerlemesi
               </h3>
               <p className="text-sm text-muted-foreground">
-                Bu ayki kazanımınız
+                {hasActiveLoyaltyCampaign
+                  ? loyaltyCampaign?.title
+                  : "Bu türde aktif kampanya yok"}
               </p>
 
-<div className="relative mx-auto mt-5 flex h-72 w-72 max-w-full items-center justify-center">
-  <svg className="absolute inset-0 h-full w-full -rotate-90">
-    <circle
-      cx="50%"
-      cy="50%"
-      r="112"
-      fill="none"
-      stroke="hsl(var(--muted))"
-      strokeWidth="10"
-    />
-    <circle
-      cx="50%"
-      cy="50%"
-      r="112"
-      fill="none"
-      stroke="hsl(var(--primary))"
-      strokeWidth="10"
-      strokeLinecap="round"
-      strokeDasharray={2 * Math.PI * 112}
-      strokeDashoffset={2 * Math.PI * 112 * (1 - progressPercent / 100)}
-    />
-  </svg>
+              <div className="relative mx-auto mt-5 flex h-72 w-72 max-w-full items-center justify-center">
+                <svg className="absolute inset-0 h-full w-full">
+                  <circle
+                    cx="50%"
+                    cy="50%"
+                    r={circleRadius}
+                    fill="none"
+                    stroke="hsl(var(--muted))"
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                    strokeDasharray={`${arcLength} ${circleCircumference}`}
+                    strokeDashoffset="0"
+                    transform="rotate(130 144 144)"
+                  />
+                  <circle
+                    cx="50%"
+                    cy="50%"
+                    r={circleRadius}
+                    fill="none"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                    strokeDasharray={`${arcProgressLength} ${circleCircumference}`}
+                    strokeDashoffset="0"
+                    transform="rotate(130 144 144)"
+                  />
+                </svg>
 
-  <div className="relative z-10 flex flex-col items-center justify-center">
-  <img
-    src="/icons/milk-glass-transparent.png"
-    alt="Süt Bardağı"
-    className="h-24 w-auto object-contain drop-shadow-md"
-  />
+                <div className="relative z-10 flex flex-col items-center justify-center">
+                  <img
+                    src="/icons/milk-glass-transparent.png"
+                    alt="Süt Bardağı"
+                    className="h-28 w-auto object-contain drop-shadow-md"
+                  />
 
-  <p className="mt-3 text-4xl font-bold text-primary">
-    {currentLiters} L
-  </p>
+                  <p className="mt-3 text-2xl font-bold text-muted-foreground">
+                    {hasActiveLoyaltyCampaign
+                      ? `${currentLiters}/${loyaltyTarget}`
+                      : "—"}
+                  </p>
 
-  <p className="text-sm text-muted-foreground">
-    kazanılan
-  </p>
-
-  <span className="mt-2 rounded-full bg-primary/10 px-4 py-1 text-sm font-semibold text-primary">
-    %{Math.round(progressPercent)}
-  </span>
-</div>
-
-  {/* Progress milestone bardakları */}
-<img
-  src="/icons/milk-glass-transparent.png"
-  alt=""
-  aria-hidden="true"
-  className="absolute -left-1 top-[45%] h-7 w-auto object-contain opacity-50"
-/>
-
-<img
-  src="/icons/milk-glass-transparent.png"
-  alt=""
-  aria-hidden="true"
-  className="absolute left-1/2 -top-1 h-7 w-auto -translate-x-1/2 object-contain opacity-50"
-/>
-
-<img
-  src="/icons/milk-glass-transparent.png"
-  alt=""
-  aria-hidden="true"
-  className="absolute -right-1 top-[45%] h-7 w-auto object-contain opacity-50"
-/>
-
-<img
-  src="/icons/milk-glass-transparent.png"
-  alt=""
-  aria-hidden="true"
-  className="absolute right-[8%] bottom-[8%] h-7 w-auto object-contain opacity-50"
-/>
-  <span className="absolute bottom-4 left-6 text-xs text-muted-foreground">
-    0 L
-  </span>
-
-  <span className="absolute top-4 left-1/2 -translate-x-1/2 text-xs text-muted-foreground">
-    25 L
-  </span>
-
-  <span className="absolute bottom-4 right-6 text-xs text-muted-foreground">
-    50 L
-  </span>
-</div>
+                  <p className="text-sm text-muted-foreground">Litre</p>
+                </div>
+              </div>
 
               <div className="mt-5 rounded-xl bg-primary/5 p-4 text-sm">
-                <p className="text-muted-foreground">
-                  {remainingLiters > 0
-                    ? `Bu ay ${remainingLiters} L daha alım yaparak`
-                    : "Tebrikler! Harika gidiyorsunuz."}
-                </p>
-                <p className="font-semibold text-primary">
-                  {remainingLiters > 0
-                    ? "3L hediye süt kazanabilirsiniz."
-                    : "Hediyeniz hazır 🎁"}
-                </p>
+                {!hasActiveLoyaltyCampaign ? (
+                  <>
+                    <p className="text-muted-foreground">
+                      Bu türde bir kampanya henüz tanımlı değil.
+                    </p>
+                    <p className="font-semibold text-primary">
+                      Yeni kampanya tanımlandığında burada görünecek.
+                    </p>
+                  </>
+                ) : remainingLiters > 0 ? (
+                  <>
+                    <p className="text-muted-foreground">
+                      Bu ay {remainingLiters} L daha alım yaparak
+                    </p>
+                    <p className="font-semibold text-primary">
+                      {loyaltyRewardValue}
+                      {loyaltyRewardUnit} hediye süt kazanabilirsiniz.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-muted-foreground">
+                      Tebrikler! Hedefi tamamladınız.
+                    </p>
+                    <p className="font-semibold text-primary">
+                      Hediyeniz hazır 🎁
+                    </p>
+                  </>
+                )}
               </div>
             </div>
 
@@ -737,7 +814,9 @@ const MemberPage = () => {
                           {reward.reward_value}
                         </span>
                         <span className="text-sm">
-                          {reward.reward_type === "free_liter" ? "L" : "TL"}
+                          {reward.reward_type === "free_liter"
+                            ? loyaltyRewardUnit
+                            : "TL"}
                         </span>
                         <ChevronRight className="h-4 w-4" />
                       </div>
@@ -759,11 +838,11 @@ const MemberPage = () => {
 
               <div className="mx-auto mt-6 flex h-56 w-56 items-center justify-center rounded-full border-4 border-primary bg-primary/5">
                 <div className="text-center">
-                <img
-  src="/icons/cow-head-transparent.png"
-  alt="Üyelik Segmenti"
-  className="mx-auto mb-3 h-20 w-20 object-contain"
-/>
+                  <img
+                    src="/icons/cow-head-transparent.png"
+                    alt="Üyelik Segmenti"
+                    className="mx-auto mb-3 h-20 w-20 object-contain"
+                  />
                   <p className="text-2xl font-bold text-primary">
                     {monthlyProgress?.vip_level || "Standart"}
                   </p>
@@ -787,7 +866,7 @@ const MemberPage = () => {
                 </div>
 
                 <p className="mt-2 text-right text-sm text-muted-foreground">
-                  {currentLiters} / {loyaltyTarget} L
+                  {currentLiters} / {hasActiveLoyaltyCampaign ? loyaltyTarget : 50} L
                 </p>
               </div>
             </div>
