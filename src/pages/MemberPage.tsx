@@ -629,7 +629,11 @@ const MemberPage = () => {
   />
   <div className="absolute left-3 right-3 top-3 h-2 rounded-full bg-primary/10" />
   <div className="absolute inset-x-4 bottom-4 h-16 rounded-full bg-white/60 blur-sm" />
-  <Milk className="absolute left-1/2 top-1/2 h-11 w-11 -translate-x-1/2 -translate-y-1/2 text-primary" />
+  <img
+  src="/icons/milk-glass.png"
+  alt="Süt Bardağı"
+  className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-md"
+ />
 </div>
                   <p className="mt-4 text-4xl font-bold text-primary">
                     {currentLiters} L
@@ -730,7 +734,11 @@ const MemberPage = () => {
 
               <div className="mx-auto mt-6 flex h-56 w-56 items-center justify-center rounded-full border-4 border-primary bg-primary/5">
                 <div className="text-center">
-                  <Trophy className="mx-auto mb-3 h-12 w-12 text-primary" />
+                <img
+  src="/icons/cow-head.png"
+  alt="Üyelik Segmenti"
+  className="mx-auto mb-3 h-20 w-20 object-contain"
+/>
                   <p className="text-2xl font-bold text-primary">
                     {monthlyProgress?.vip_level || "Standart"}
                   </p>
