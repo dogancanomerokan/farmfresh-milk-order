@@ -944,16 +944,19 @@ const vipArcProgressLength = arcLength * (vipArcProgressPercent / 100);
   </div>
 </div>
 
-              <div className="mt-6 rounded-xl bg-muted/40 p-4">
+             <div className="mt-6 rounded-xl bg-muted/40 p-4">
   {nextVip ? (
     <>
       <p className="font-semibold text-foreground">
-        Sonraki seviye: {nextVip.next}
+        {hasReachedNextVip
+          ? `${nextMonthName} ayında ${nextVip.next}`
+          : `Sonraki seviye: ${nextVip.next}`}
       </p>
 
       <p className="mt-1 text-sm text-muted-foreground">
-        Bu ay {nextVip.target} L seviyesine ulaşarak gelecek ay{" "}
-        {nextVip.next} seviyesine yükselebilirsiniz.
+        {hasReachedNextVip
+          ? `${nextMonthName} ayında ${nextVip.next} seviyesi avantajlarından faydalanıyor olacaksınız.`
+          : `Bu ay ${nextVip.target} L seviyesine ulaşarak gelecek ay ${nextVip.next} seviyesine yükselebilirsiniz.`}
       </p>
 
       <div className="mt-4 h-2 rounded-full bg-muted">
@@ -974,7 +977,7 @@ const vipArcProgressLength = arcLength * (vipArcProgressPercent / 100);
       </p>
 
       <p className="mt-1 text-sm text-muted-foreground">
-        Bu ay Platinum avantajlarından yararlanabilirsiniz.
+        {nextMonthName} ayında Platinum avantajlarından faydalanıyor olacaksınız.
       </p>
     </>
   )}
