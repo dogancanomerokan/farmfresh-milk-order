@@ -283,33 +283,36 @@ function applyCampaignReward(
 }
 
 export async function fetchActiveCampaigns(): Promise<Campaign[]> {
-  const { data, error } = await supabase
-    .from("campaigns")
-    .select(`
-      *,
-      campaign_rule_types (
-        id,
-        code,
-        name,
-        description
-      ),
-      campaign_conditions (
-        id,
-        campaign_id,
-        condition_key,
-        condition_value
-      ),
-      campaign_rewards (
-        id,
-        campaign_id,
-        reward_type,
-        reward_value,
-        reward_unit
-      )
-    `)
-    .eq("is_active", true)
-  .eq("is_archived", false);
+ const today = new Date().toISOString().split("T")[0];
 
+const { data, error } = await supabase
+  .from("campaigns")
+  .select(`
+    *,
+    campaign_rule_types (
+      id,
+      code,
+      name,
+      description
+    ),
+    campaign_conditions (
+      id,
+      campaign_id,
+      condition_key,
+      condition_value
+    ),
+    campaign_rewards (
+      id,
+      campaign_id,
+      reward_type,
+      reward_value,
+      reward_unit
+    )
+  `)
+  .eq("is_active", true)
+  .eq("is_archived", false)
+  .lte("start_date", today)
+  .gte("end_date", today);
   if (error) {
     console.error(
       "Active campaigns fetch failed:",
