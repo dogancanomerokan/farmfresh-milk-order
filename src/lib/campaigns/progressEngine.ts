@@ -25,6 +25,22 @@ type ProgressInput = {
   rewardUnit?: string | null;
 };
 
+export function calculateVipLevel(totalLiters: number) {
+  if (totalLiters >= 500) {
+    return "Platinum";
+  }
+
+  if (totalLiters >= 250) {
+    return "Gold";
+  }
+
+  if (totalLiters >= 100) {
+    return "Silver";
+  }
+
+  return "Standart";
+}
+
 export async function getMonthlyDeliveredVolume(userId?: string | null) {
   if (!userId) return 0;
 
