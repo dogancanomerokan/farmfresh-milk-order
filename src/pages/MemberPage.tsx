@@ -904,7 +904,7 @@ const vipArcProgressLength = arcLength * (vipArcProgressPercent / 100);
     <circle
       cx="50%"
       cy="50%"
-      r="82"
+      r="112"
       fill="none"
       stroke="hsl(var(--muted))"
       strokeWidth="8"
@@ -917,7 +917,7 @@ const vipArcProgressLength = arcLength * (vipArcProgressPercent / 100);
     <circle
       cx="50%"
       cy="50%"
-      r="82"
+      r="112"
       fill="none"
       stroke="hsl(var(--primary))"
       strokeWidth="8"
