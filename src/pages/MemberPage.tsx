@@ -361,12 +361,27 @@ setActiveVipLevel(activeVipData || null);
   const loyaltyRewardValue = Number(loyaltyReward?.reward_value || 0);
   const loyaltyRewardUnit = loyaltyReward?.reward_unit || "L";
 
-  const hasActiveLoyaltyCampaign = Boolean(
-    loyaltyCampaign && loyaltyTarget > 0 && loyaltyRewardValue > 0
-  );
-
+ 
+const remainingLiters = hasActiveLoyaltyCampaign
+  ? Math.max(loyaltyTarget - currentLiters, 0)
+  : 0;
+  
   const currentLiters = Number(monthlyProgress?.total_liters || 0);
 
+  const progressPercent = hasActiveLoyaltyCampaign
+  ? Math.min((currentLiters / loyaltyTarget) * 100, 100)
+  : 0;
+
+const remainingLiters = hasActiveLoyaltyCampaign
+  ? Math.max(loyaltyTarget - currentLiters, 0)
+  : 0;
+
+  const circleRadius = 102;
+  const circleCircumference = 2 * Math.PI * circleRadius;
+  const arcRatio = 0.78;
+  const arcLength = circleCircumference * arcRatio;
+  const arcProgressLength = arcLength * (progressPercent / 100);
+  
   const currentVipLevel = activeVipLevel?.vip_level || "Standart";
 
 const vipRanges: Record<string, string> = {
@@ -383,13 +398,8 @@ const vipNextTargets: Record<string, { next: string; target: number } | null> = 
   Platinum: null,
 };
 
-   const circleRadius = 102;
-  const circleCircumference = 2 * Math.PI * circleRadius;
-  const arcRatio = 0.78;
-  const arcLength = circleCircumference * arcRatio;
-  const arcProgressLength = arcLength * (progressPercent / 100);
-  
 const nextVip = vipNextTargets[currentVipLevel];
+  console.log("VIP:", currentVipLevel);
 const nextVipProgressPercent = nextVip
   ? Math.min((currentLiters / nextVip.target) * 100, 100)
   : 100;
@@ -410,15 +420,7 @@ const vipArcProgressPercent = nextVip
 
 const vipArcProgressLength = arcLength * (vipArcProgressPercent / 100);
   
-  const progressPercent = hasActiveLoyaltyCampaign
-    ? Math.min((currentLiters / loyaltyTarget) * 100, 100)
-    : 0;
-
-  const remainingLiters = hasActiveLoyaltyCampaign
-    ? Math.max(loyaltyTarget - currentLiters, 0)
-    : 0;
-
-   const startEdit = () => {
+     const startEdit = () => {
     setFormData({
       name: profile?.full_name || "",
       phone: profile?.phone || "",
